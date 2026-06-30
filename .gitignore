@@ -7,8 +7,10 @@ credentials.json
 .streamlit/secrets.toml
 
 # --- Data (fetched market data, not committed) ---
-data/
-!data/.gitkeep
+# 先頭スラッシュでリポジトリ直下の data/ のみ対象にする
+# (スラッシュ無しだと src/data/ などソースのフォルダまで巻き込むため)
+/data/
+!/data/.gitkeep
 *.parquet
 *.csv
 *.pkl
