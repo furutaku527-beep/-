@@ -113,31 +113,40 @@ if source == "低位株 自動スクリーニング":
         st.sidebar.error(
             "APIキーが未設定です。Secrets か .env の JQUANTS_API_KEY を設定してください。"
         )
+    st.sidebar.caption(
+        "無料プランは全銘柄一括取得が不可のため、上場マスタ→個別取得で選別します。"
+    )
     st.sidebar.markdown("**スクリーニング条件**")
     max_price = st.sidebar.number_input("上限株価(円・低位株)", 100, 5000, 1000, 100)
     min_turn_oku = st.sidebar.slider("最小売買代金(億円)", 0.1, 10.0, 0.5, 0.1)
-    min_range = st.sidebar.slider("最小日中変動率(基準日)", 0.0, 0.15, 0.0, 0.01,
-                                  help="基準日の(高値-安値)/終値。0で無効")
-    top_n = st.sidebar.slider("採用銘柄数(上位N・売買代金順)", 5, 100, 30, 5)
+    min_range = st.sidebar.slider("最小日中変動率", 0.0, 0.15, 0.0, 0.01,
+                                  help="直近20日平均の(高値-安値)/終値。0で無効")
+    top_n = st.sidebar.slider("採用銘柄数(条件を満たす上位)", 5, 60, 30, 5)
+    scan_limit = st.sidebar.slider("走査する銘柄数(多いほど精度↑/時間↑)",
+                                   20, 200, 80, 10,
+                                   help="マスタからこの件数まで個別取得して選別")
     excl_prime = st.sidebar.checkbox("プライム市場を除外", value=True)
-    snap_date = st.sidebar.date_input("スクリーニング基準日", _def_to,
-                                      help="この日の全銘柄から抽出。提供範囲外は自動調整")
     st.sidebar.markdown("**取得期間(バックテスト用)**")
     frm = st.sidebar.date_input("取得開始日", _def_from, key="scr_from")
     to = st.sidebar.date_input("取得終了日", _def_to, key="scr_to")
     if st.sidebar.button("🔎 スクリーニング & 取得", disabled=not has_creds):
         live_universe = screen_and_fetch(
-            str(snap_date), float(max_price), min_turn_oku * 1e8, float(min_range),
-            int(top_n), bool(excl_prime), str(frm), str(to),
+            float(max_price), min_turn_oku * 1e8, float(min_range),
+            int(top_n), int(scan_limit), bool(excl_prime), str(frm), str(to),
         )
         st.session_state["live_universe"] = live_universe
     live_universe = st.session_state.get("live_universe")
     if "_screen_table" in st.session_state and st.session_state["_screen_table"] is not None:
         n_hit = len(st.session_state["_screen_table"])
-        st.sidebar.caption(f"抽出 {n_hit} 銘柄(売買代金上位)")
-        if n_hit == 0 and "_screen_diag" in st.session_state:
+        diag = st.session_state.get("_screen_diag", {})
+        scanned = diag.get("scanned")
+        cap = f"選別 {n_hit} 銘柄"
+        if scanned is not None:
+            cap += f"(走査 {scanned} 銘柄中)"
+        st.sidebar.caption(cap)
+        if n_hit == 0 and diag:
             with st.sidebar.expander("🔧 スクリーニング診断(0件の原因)", expanded=True):
-                st.json(st.session_state["_screen_diag"])
+                st.json(diag)
     if "_fetch_errors" in st.session_state:
         st.sidebar.warning("一部取得できませんでした(先頭のみ):\n"
                            + "\n".join(st.session_state["_fetch_errors"][:5]))

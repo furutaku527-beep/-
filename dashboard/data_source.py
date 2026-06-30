@@ -40,42 +40,53 @@ def resolve_credentials() -> bool:
     return bool(os.environ.get("JQUANTS_API_KEY"))
 
 
-@st.cache_data(show_spinner="低位株をスクリーニング中...", ttl=3600)
+@st.cache_data(show_spinner="低位株をスキャン中(マスタ→個別取得)...", ttl=3600)
 def screen_and_fetch(
-    snapshot_date: str,
     max_price: float,
     min_turnover: float,
     min_range_pct: float,
     top_n: int,
+    scan_limit: int,
     exclude_prime: bool,
     from_date: str,
     to_date: str,
 ) -> dict:
-    """全銘柄から低位株をスクリーニングし、その銘柄の日足を取得して返す."""
-    from src.data.screener import screen_low_priced
+    """無料プラン対応のスクリーニング.
+
+    全銘柄一括スナップショットは無料プランで取れないため、上場マスタ(無料可)から
+    非プライム銘柄を作り、個別に日足を取得しながら低位・流動性・ボラで選別する。
+    scan_limit 件まで走査し、条件を満たす銘柄を top_n 件集める。
+    """
+    from src.data.screener import select_nonprime_codes, qualifies_low_priced
 
     client = JQuantsClient.from_env()
     diag: dict = {}
-    cand = screen_low_priced(
-        client, snapshot_date, max_price=max_price, min_turnover=min_turnover,
-        min_range_pct=min_range_pct, top_n=top_n, exclude_prime=exclude_prime,
-        diag=diag,
-    )
-    st.session_state["_screen_table"] = cand
-    st.session_state["_screen_diag"] = diag
-    codes = [str(c) for c in cand["Code"].tolist()] if not cand.empty else []
+    codes = select_nonprime_codes(client, exclude_prime=exclude_prime, diag=diag)
 
     universe: dict[str, pd.DataFrame] = {}
     errors: list[str] = []
+    scanned = 0
     for c in codes:
+        if scanned >= scan_limit or len(universe) >= top_n:
+            break
+        scanned += 1
         try:
             df = client.get_daily_quotes(c, from_date, to_date)
-            if not df.empty:
-                universe[c] = df
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{c}: {exc}")
+            continue
+        if qualifies_low_priced(df, max_price=max_price, min_turnover=min_turnover,
+                                min_range_pct=min_range_pct):
+            universe[c] = df
+
+    diag["scanned"] = scanned
+    diag["selected"] = len(universe)
+    st.session_state["_screen_diag"] = diag
+    st.session_state["_screen_table"] = (
+        pd.DataFrame({"Code": list(universe.keys())}) if universe else pd.DataFrame()
+    )
     if errors:
-        st.session_state["_fetch_errors"] = errors
+        st.session_state["_fetch_errors"] = errors[:8]
     else:
         st.session_state.pop("_fetch_errors", None)
     return universe

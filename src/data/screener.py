@@ -11,12 +11,16 @@
 
 from __future__ import annotations
 
+import random
 from datetime import date
 from typing import Optional
 
 import pandas as pd
 
 from .jquants_client import JQuantsClient
+
+# 上場マスタで銘柄コードを表しうる列名の候補
+_CODE_COL_CANDIDATES = ["code", "Code", "local_code", "LocalCode", "ticker", "Ticker"]
 
 # 上場マスタで市場区分を表しうる列名の候補(V2の正確な列名が不明なため複数試す)
 _MARKET_COL_CANDIDATES = [
@@ -32,6 +36,79 @@ def _market_series(master: pd.DataFrame) -> Optional[pd.Series]:
         if col in master.columns:
             return master[col].astype(str)
     return None
+
+
+def _code_col(master: pd.DataFrame) -> Optional[str]:
+    return next((c for c in _CODE_COL_CANDIDATES if c in master.columns), None)
+
+
+def select_nonprime_codes(
+    client: JQuantsClient,
+    *,
+    exclude_prime: bool = True,
+    seed: int = 42,
+    diag: Optional[dict] = None,
+) -> list[str]:
+    """上場マスタ(無料プランで取得可)から銘柄コード一覧を作る.
+
+    プライム市場をベストエフォートで除外し、市場全体を満遍なくサンプリングするため
+    決定的にシャッフルして返す(キャッシュと再現性のため seed 固定)。
+    """
+    master = client.get_listed_info()
+    if diag is not None:
+        diag["master_rows"] = int(len(master))
+        diag["master_columns"] = list(master.columns)
+    code_col = _code_col(master)
+    if code_col is None:
+        if diag is not None:
+            diag["code_col_found"] = False
+        return []
+
+    codes_df = master[[code_col]].astype(str).rename(columns={code_col: "_code"})
+    mkt = _market_series(master)
+    if exclude_prime and mkt is not None:
+        keep = ~mkt.str.lower().apply(lambda v: any(t in v for t in _PRIME_TOKENS))
+        codes = master.loc[keep.values, code_col].astype(str).tolist()
+        if diag is not None:
+            diag["nonprime_codes"] = int(len(codes))
+    else:
+        codes = codes_df["_code"].tolist()
+        if diag is not None and exclude_prime:
+            diag["market_col_found"] = False
+
+    # 5桁→4桁の重複や欠損を除き、決定的にシャッフル
+    codes = [c for c in dict.fromkeys(codes) if c and c.lower() != "nan"]
+    random.Random(seed).shuffle(codes)
+    return codes
+
+
+def qualifies_low_priced(
+    df: pd.DataFrame,
+    *,
+    max_price: float = 1000.0,
+    min_turnover: float = 5e7,
+    min_range_pct: float = 0.0,
+    min_history_days: int = 60,
+) -> bool:
+    """取得済みの日足から、低位・流動性・ボラの条件を満たすか判定."""
+    if df is None or df.empty or len(df) < min_history_days:
+        return False
+    recent = df.tail(20)
+    close = pd.to_numeric(recent.get("Close"), errors="coerce")
+    vol = pd.to_numeric(recent.get("Volume"), errors="coerce")
+    high = pd.to_numeric(recent.get("High"), errors="coerce")
+    low = pd.to_numeric(recent.get("Low"), errors="coerce")
+    if close.isna().all():
+        return False
+    last_close = close.iloc[-1]
+    turnover = (close * vol).mean()
+    range_pct = ((high - low) / close).mean()
+    return bool(
+        last_close > 0
+        and last_close < max_price
+        and turnover >= min_turnover
+        and (pd.isna(range_pct) or range_pct >= min_range_pct)
+    )
 
 
 def screen_low_priced(
