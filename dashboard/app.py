@@ -139,8 +139,10 @@ dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.03, 0.005,
                             help="エントリーに必要な前日終値と5日線の乖離")
 stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.05, 0.015, 0.005)
 min_turnover_oku = st.sidebar.slider("最小売買代金(億円)", 0.0, 10.0, 1.0, 0.5)
-exclude_prime = st.sidebar.checkbox("プライム市場を除外", value=False,
-                                    help="市場区分データがある場合のみ有効")
+exclude_prime = st.sidebar.checkbox(
+    "プライム市場を除外(準備中)", value=False, disabled=True,
+    help="市場区分データの取得が必要なため未対応。今後 listed_info から実装予定。",
+)
 
 st.sidebar.subheader("資金・コスト")
 initial_capital = st.sidebar.number_input("初期資金(円)", 100_000, 100_000_000,

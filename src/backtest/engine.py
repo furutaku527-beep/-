@@ -112,11 +112,13 @@ def run_backtest(
                 }
             )
         equity += day_pnl
-        # その日のトレードに当日終了時資産を記録
-        for row in executed_rows[-len(picked):]:
-            row["equity_after"] = equity
+        # その日のトレードに当日終了時資産を記録(picked が空なら何もしない)
+        n_pick = len(picked)
+        if n_pick:
+            for row in executed_rows[-n_pick:]:
+                row["equity_after"] = equity
         equity_rows.append({"Date": date, "equity": equity, "day_pnl": day_pnl,
-                            "n_trades": len(picked)})
+                            "n_trades": n_pick})
 
     executed = pd.DataFrame(executed_rows)
     equity_curve = pd.DataFrame(equity_rows)

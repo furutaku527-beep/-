@@ -53,3 +53,38 @@ def test_costs_reduce_return():
     from src.backtest.engine import _apply_costs
     p = StrategyParams(fee_rate=0.001, slippage_pct=0.001)
     assert _apply_costs(0.02, p) < 0.02
+
+
+def test_no_lookahead():
+    """先読み防止: 後日のデータを足しても、過去のトレードは一切変わらない."""
+    p = StrategyParams()
+    df = make_daily(seed=7, n=250)
+    full = generate_trades(df, p, apply_screening=False)
+
+    cut = 160
+    df_trunc = df.iloc[:cut].copy()
+    part = generate_trades(df_trunc, p, apply_screening=False)
+
+    # 切り詰めた範囲のトレードは、全期間版と完全一致するはず
+    last_date = pd.to_datetime(df_trunc["Date"]).max()
+    full_sub = full[full["Date"] <= last_date].reset_index(drop=True)
+    part = part.reset_index(drop=True)
+
+    assert len(part) == len(full_sub), "切り詰めでトレード件数が変化(=先読みの疑い)"
+    if not part.empty:
+        assert (abs(part["entry"].values - full_sub["entry"].values) < 1e-9).all()
+        assert (abs(part["exit"].values - full_sub["exit"].values) < 1e-9).all()
+
+
+def test_entry_uses_prior_day_line():
+    """エントリー価格(=基準線)は前日までで確定したMA5であること(当日終値非依存)."""
+    from src.strategy.indicators import normalize_ohlcv, add_indicators
+    p = StrategyParams()
+    df = make_daily(seed=2, n=300)
+    trades = generate_trades(df, p, apply_screening=False)
+    ind = add_indicators(normalize_ohlcv(df), p).set_index("Date")
+    for _, tr in trades.iterrows():
+        # その日の MA5(当日終値込み)とは一致せず、前日 MA5 と一致するはず
+        prev_idx = ind.index.get_loc(tr["Date"]) - 1
+        prev_ma = ind["MA_fast"].iloc[prev_idx]
+        assert abs(tr["entry"] - prev_ma) < 1e-9

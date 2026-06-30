@@ -68,39 +68,43 @@ def generate_trades(
     df = add_indicators(df, p)
 
     rows = []
-    # t-1 の確定値でセットアップ、t の OHLC でトレード
-    for i in range(1, len(df)):
+    # 先読み防止: 当日 t のトレード判断には「前日までで確定した情報」だけを使う。
+    #   - 基準となる5日線 line = 前日終値までで計算した MA5(= 寄り時点で既知)
+    #   - セットアップ(向き・線の上・乖離)も t-1, t-2 の確定値で判定
+    #   - 当日は OHLC(始値・高値・安値・終値)だけを約定に使う
+    for i in range(2, len(df)):
+        prev2 = df.iloc[i - 2]
         prev = df.iloc[i - 1]
         cur = df.iloc[i]
 
-        ma_fast = cur["MA_fast"]
-        if pd.isna(ma_fast) or pd.isna(prev["MA_fast"]):
+        line = prev["MA_fast"]            # 前日までで確定した5日線(未来情報を含まない)
+        if pd.isna(line) or pd.isna(prev2["MA_fast"]):
             continue
 
-        # --- セットアップ条件(前日まで)---
-        rising = cur["MA_fast"] > prev["MA_fast"]                  # 5日線 上向き
-        above_line = prev["Close"] > prev["MA_fast"]              # 前日は線の上
-        deviated = prev["dev_fast"] >= p.dev_min                   # 乖離あり
+        # --- セットアップ条件(前日までで確定)---
+        rising = prev["MA_fast"] > prev2["MA_fast"]    # 前日時点で5日線が上向き
+        above_line = prev["Close"] > prev["MA_fast"]   # 前日は線の上
+        deviated = prev["dev_fast"] >= p.dev_min        # 前日終値が線から乖離
         if not (rising and above_line and deviated):
             continue
 
-        # --- 当日トリガー: 押し目タッチ ---
-        touched = cur["Low"] <= ma_fast                            # 5日線にタッチ
+        # --- 当日トリガー: 確定した線への押し目タッチ ---
+        touched = cur["Low"] <= line                    # 日中に前日5日線へタッチ
         if not touched:
             continue
-        if p.require_open_above and cur["Open"] < ma_fast * (1 - p.open_buf):
+        if p.require_open_above and cur["Open"] < line * (1 - p.open_buf):
             # 寄りから線を大きく割って始まる日は対象外(ギャップダウン回避)
             continue
 
-        entry = ma_fast                                            # 線で拾う想定
-        stop = ma_fast * (1 - p.stop_pct)
+        entry = line                                    # 線で拾う想定
+        stop = line * (1 - p.stop_pct)
 
-        # --- 決済 ---
+        # --- 決済(当日内で完結)---
         if cur["Low"] < stop:
-            exit_price = stop                                      # 線割れ → 損切
+            exit_price = stop                           # 線割れ → 損切
             reason = "stop"
         else:
-            exit_price = cur["Close"]                              # 引け決済
+            exit_price = cur["Close"]                   # 引け決済
             reason = "close"
 
         ret_gross = exit_price / entry - 1.0
@@ -114,8 +118,8 @@ def generate_trades(
                 "exit_reason": reason,
                 "ret_gross": ret_gross,
                 "dev_fast": prev["dev_fast"],
-                "ma_fast": ma_fast,
-                "ma_slow": cur["MA_slow"],
+                "ma_fast": line,
+                "ma_slow": prev["MA_slow"],
             }
         )
 
