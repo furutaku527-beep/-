@@ -81,18 +81,53 @@ def filter_period(universe: dict, start, end) -> dict:
 # ----------------------------------------------------------------------- #
 # サイドバー(設定)
 # ----------------------------------------------------------------------- #
+from datetime import date, timedelta              # noqa: E402
+from dashboard.data_source import resolve_credentials, fetch_live  # noqa: E402
+
 st.sidebar.title("⚙️ 設定")
 
 saved = list_saved_codes()
-use_demo = st.sidebar.toggle(
-    "デモデータを使う(合成データ)", value=not saved,
-    help="J-Quants 未取得でも動作確認できます。実データがあればOFF。",
-)
+has_creds = resolve_credentials()
+
+# データソースの選択(クラウドでは「J-Quantsから取得」が主役)
+source_options = ["デモ(合成データ)", "J-Quantsから取得", "保存済みデータ"]
+default_idx = 1 if (has_creds and not saved) else (2 if saved else 0)
+source = st.sidebar.radio("データソース", source_options, index=default_idx)
+
+use_demo = source == "デモ(合成データ)"
+live_universe = None  # J-Quants取得時にセット
 
 if use_demo:
     st.sidebar.info("合成データで表示中(実データではありません)")
     all_codes = ["7203", "6758", "9984", "4591", "2884"]
-else:
+
+elif source == "J-Quantsから取得":
+    if not has_creds:
+        st.sidebar.error(
+            "認証情報が未設定です。Streamlit Secrets か .env に "
+            "JQUANTS_MAILADDRESS / JQUANTS_PASSWORD を設定してください。"
+        )
+        st.sidebar.caption("(設定済みなら再読み込みしてください)")
+    codes_text = st.sidebar.text_input(
+        "銘柄コード(カンマ区切り)", "7203,6758,9984",
+        help="例: 7203,6758,9984",
+    )
+    default_to = date.today()
+    default_from = default_to - timedelta(days=365)
+    frm = st.sidebar.date_input("取得開始日", default_from)
+    to = st.sidebar.date_input("取得終了日", default_to)
+    if st.sidebar.button("📥 データ取得 / 更新", disabled=not has_creds):
+        codes = tuple(c.strip() for c in codes_text.split(",") if c.strip())
+        live_universe = fetch_live(codes, str(frm), str(to))
+        st.session_state["live_universe"] = live_universe
+    live_universe = st.session_state.get("live_universe")
+    if "_fetch_errors" in st.session_state:
+        st.sidebar.warning("一部取得できませんでした:\n" + "\n".join(st.session_state["_fetch_errors"]))
+    all_codes = sorted(live_universe.keys()) if live_universe else []
+    if not all_codes:
+        st.sidebar.caption("「データ取得」を押すと検証できます。")
+
+else:  # 保存済みデータ
     all_codes = saved
     if not all_codes:
         st.sidebar.warning("data/raw に保存データがありません。先に scripts/fetch_data.py で取得してください。")
@@ -122,11 +157,15 @@ apply_screening = st.sidebar.checkbox("スクリーニング適用", value=True)
 st.title("📈 5日線デイトレード手法 バックテスト")
 st.caption("シンジ氏 note手法(5日線軸)を日足で検証 — 過去データ検証であり将来の利益を保証しません")
 
-universe = load_universe(tuple(selected), use_demo)
-universe = {k: v for k, v in universe.items() if k in selected}
+if source == "J-Quantsから取得":
+    universe = {k: v for k, v in (live_universe or {}).items() if k in selected}
+else:
+    universe = load_universe(tuple(selected), use_demo)
+    universe = {k: v for k, v in universe.items() if k in selected}
 
 if not universe:
-    st.warning("対象データがありません。サイドバーで銘柄を選ぶか、デモデータをONにしてください。")
+    st.warning("対象データがありません。サイドバーでデータソース・銘柄を選んでください"
+               "(J-Quants取得の場合は「データ取得」を押してください)。")
     st.stop()
 
 # 期間の範囲を算出して日付スライダー

@@ -4,6 +4,7 @@
 !.env.example
 *.key
 credentials.json
+.streamlit/secrets.toml
 
 # --- Data (fetched market data, not committed) ---
 data/
