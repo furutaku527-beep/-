@@ -1,0 +1,38 @@
+# --- Secrets / credentials ---
+.env
+.env.*
+!.env.example
+*.key
+credentials.json
+
+# --- Data (fetched market data, not committed) ---
+data/
+!data/.gitkeep
+*.parquet
+*.csv
+*.pkl
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Reports / outputs ---
+output/
+reports/
+*.png
+!docs/**/*.png
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+*.swp

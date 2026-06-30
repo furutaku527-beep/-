@@ -1,0 +1,16 @@
+# Data acquisition & processing
+requests>=2.31
+pandas>=2.0
+numpy>=1.24
+pyarrow>=14.0          # parquet I/O
+python-dotenv>=1.0     # load .env
+
+# Backtest / reporting
+matplotlib>=3.7
+
+# Dashboard
+streamlit>=1.30
+plotly>=5.18
+
+# Dev / test
+pytest>=7.4
