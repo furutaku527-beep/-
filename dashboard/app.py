@@ -135,6 +135,9 @@ if source == "低位株 自動スクリーニング":
     if "_screen_table" in st.session_state and st.session_state["_screen_table"] is not None:
         n_hit = len(st.session_state["_screen_table"])
         st.sidebar.caption(f"抽出 {n_hit} 銘柄(売買代金上位)")
+        if n_hit == 0 and "_screen_diag" in st.session_state:
+            with st.sidebar.expander("🔧 スクリーニング診断(0件の原因)", expanded=True):
+                st.json(st.session_state["_screen_diag"])
     if "_fetch_errors" in st.session_state:
         st.sidebar.warning("一部取得できませんでした(先頭のみ):\n"
                            + "\n".join(st.session_state["_fetch_errors"][:5]))

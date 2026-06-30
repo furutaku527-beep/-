@@ -55,11 +55,14 @@ def screen_and_fetch(
     from src.data.screener import screen_low_priced
 
     client = JQuantsClient.from_env()
+    diag: dict = {}
     cand = screen_low_priced(
         client, snapshot_date, max_price=max_price, min_turnover=min_turnover,
         min_range_pct=min_range_pct, top_n=top_n, exclude_prime=exclude_prime,
+        diag=diag,
     )
     st.session_state["_screen_table"] = cand
+    st.session_state["_screen_diag"] = diag
     codes = [str(c) for c in cand["Code"].tolist()] if not cand.empty else []
 
     universe: dict[str, pd.DataFrame] = {}
