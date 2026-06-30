@@ -113,10 +113,13 @@ elif source == "J-Quantsから取得":
         "銘柄コード(カンマ区切り)", "7203,6758,9984",
         help="例: 7203,6758,9984",
     )
-    default_to = date.today()
-    default_from = default_to - timedelta(days=365)
+    # 無料プランは約12週間遅延+直近約2年。範囲外でもクライアントが自動調整するが、
+    # 初期値は提供範囲に収まりやすい値(終了=約100日前/開始=約2年前)にしておく。
+    default_to = date.today() - timedelta(days=100)
+    default_from = date.today() - timedelta(days=720)
     frm = st.sidebar.date_input("取得開始日", default_from)
     to = st.sidebar.date_input("取得終了日", default_to)
+    st.sidebar.caption("※無料プランは約12週間遅延・直近約2年。範囲外は自動調整します。")
     if st.sidebar.button("📥 データ取得 / 更新", disabled=not has_creds):
         codes = tuple(c.strip() for c in codes_text.split(",") if c.strip())
         live_universe = fetch_live(codes, str(frm), str(to))

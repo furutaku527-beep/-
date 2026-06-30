@@ -20,6 +20,7 @@ APIキーは環境変数 / Secrets で管理し、リポジトリには含めな
 from __future__ import annotations
 
 import os
+import re
 import time
 from datetime import date, datetime
 from typing import Optional
@@ -127,6 +128,7 @@ class JQuantsClient:
                         "クライアントがV2を指しているか確認してください。"
                     )
                 if resp.status_code == 429:  # レート制限
+                    last_exc = JQuantsError("429 レート制限")
                     self._sleep_backoff(attempt)
                     continue
                 resp.raise_for_status()
@@ -136,7 +138,8 @@ class JQuantsClient:
             except requests.RequestException as exc:  # ネットワーク系は指数バックオフ
                 last_exc = exc
                 self._sleep_backoff(attempt)
-        raise JQuantsError(f"GET {path} に失敗しました: {last_exc}")
+        reason = last_exc or "リトライ上限に到達(レート制限の可能性)"
+        raise JQuantsError(f"GET {path} に失敗しました: {reason}")
 
     @staticmethod
     def _sleep_backoff(attempt: int) -> None:
@@ -205,6 +208,25 @@ class JQuantsClient:
             except JQuantsBadRequest as exc:
                 last_err = exc  # 次の日付形式で再挑戦
                 continue
+
+        # 400 がプランの提供範囲外による場合は、範囲を自動でクランプして再取得
+        if last_err is not None:
+            covered = _parse_coverage(str(last_err))
+            if covered:
+                cov_from, cov_to = covered
+                new_from = max(_fmt_date(from_date, "%Y-%m-%d"), cov_from)
+                new_to = min(_fmt_date(to_date, "%Y-%m-%d"), cov_to)
+                if new_from <= new_to:
+                    rows = self._fetch_all(
+                        "/equities/bars/daily",
+                        {"code": code, "from": new_from, "to": new_to},
+                    )
+                    last_err = None
+                else:
+                    raise JQuantsError(
+                        f"要求期間がプランの提供範囲({cov_from} 〜 {cov_to})の外です。"
+                        f"範囲内の日付を指定してください。"
+                    )
         if last_err is not None:
             raise last_err
 
@@ -218,6 +240,19 @@ class JQuantsClient:
             df["Date"] = pd.to_datetime(df["Date"])
             df = df.sort_values("Date").reset_index(drop=True)
         return df
+
+
+_COVERAGE_RE = re.compile(
+    r"covers the following dates:\s*(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})"
+)
+
+
+def _parse_coverage(message: str) -> Optional[tuple[str, str]]:
+    """『subscription covers the following dates: A ~ B』から (A, B) を抽出."""
+    m = _COVERAGE_RE.search(message)
+    if m:
+        return m.group(1), m.group(2)
+    return None
 
 
 def _fmt_date(value: str | date, fmt: str) -> str:
