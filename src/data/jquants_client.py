@@ -168,6 +168,44 @@ class JQuantsClient:
         rows = data.get("data", data.get("info", []))
         return pd.DataFrame(rows)
 
+    def get_quotes_by_date(self, qdate: str | date) -> pd.DataFrame:
+        """指定日の全銘柄の日足スナップショットを取得.
+
+        銘柄スクリーニング用。code を指定せず date だけで叩くと、その日の
+        全上場銘柄の OHLCV が返る(pagination で全件)。プラン提供範囲外の
+        日付なら、範囲内に丸めて取得する。
+        """
+        for fmt in ("%Y-%m-%d", "%Y%m%d"):
+            try:
+                rows = self._fetch_all(
+                    "/equities/bars/daily", {"date": _fmt_date(qdate, fmt)}
+                )
+                return self._standardize(rows)
+            except JQuantsBadRequest as exc:
+                cov = _parse_coverage(str(exc))
+                if cov:
+                    d = _fmt_date(qdate, "%Y-%m-%d")
+                    clamped = min(max(d, cov[0]), cov[1])  # 提供範囲に丸める
+                    rows = self._fetch_all(
+                        "/equities/bars/daily", {"date": clamped}
+                    )
+                    return self._standardize(rows)
+                # 形式違いの可能性 → 次の形式へ
+                last = exc
+        raise last
+
+    @staticmethod
+    def _standardize(rows: list[dict]) -> pd.DataFrame:
+        """V2 の小文字フィールドを標準列名へ整える共通処理."""
+        df = pd.DataFrame(rows)
+        if df.empty:
+            return df
+        df = df.rename(columns=_FIELD_MAP)
+        if "Date" in df.columns:
+            df["Date"] = pd.to_datetime(df["Date"])
+            df = df.sort_values("Date").reset_index(drop=True)
+        return df
+
     def get_daily_quotes(
         self,
         code: str,
@@ -230,16 +268,7 @@ class JQuantsClient:
         if last_err is not None:
             raise last_err
 
-        df = pd.DataFrame(rows)
-        if df.empty:
-            return df
-
-        # V2 の小文字フィールドを標準列名にリネーム(adjustment_factor 等は温存)
-        df = df.rename(columns=_FIELD_MAP)
-        if "Date" in df.columns:
-            df["Date"] = pd.to_datetime(df["Date"])
-            df = df.sort_values("Date").reset_index(drop=True)
-        return df
+        return self._standardize(rows)
 
 
 _COVERAGE_RE = re.compile(

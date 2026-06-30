@@ -40,6 +40,44 @@ def resolve_credentials() -> bool:
     return bool(os.environ.get("JQUANTS_API_KEY"))
 
 
+@st.cache_data(show_spinner="低位株をスクリーニング中...", ttl=3600)
+def screen_and_fetch(
+    snapshot_date: str,
+    max_price: float,
+    min_turnover: float,
+    min_range_pct: float,
+    top_n: int,
+    exclude_prime: bool,
+    from_date: str,
+    to_date: str,
+) -> dict:
+    """全銘柄から低位株をスクリーニングし、その銘柄の日足を取得して返す."""
+    from src.data.screener import screen_low_priced
+
+    client = JQuantsClient.from_env()
+    cand = screen_low_priced(
+        client, snapshot_date, max_price=max_price, min_turnover=min_turnover,
+        min_range_pct=min_range_pct, top_n=top_n, exclude_prime=exclude_prime,
+    )
+    st.session_state["_screen_table"] = cand
+    codes = [str(c) for c in cand["Code"].tolist()] if not cand.empty else []
+
+    universe: dict[str, pd.DataFrame] = {}
+    errors: list[str] = []
+    for c in codes:
+        try:
+            df = client.get_daily_quotes(c, from_date, to_date)
+            if not df.empty:
+                universe[c] = df
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{c}: {exc}")
+    if errors:
+        st.session_state["_fetch_errors"] = errors
+    else:
+        st.session_state.pop("_fetch_errors", None)
+    return universe
+
+
 @st.cache_data(show_spinner="J-Quants からデータ取得中...", ttl=3600)
 def fetch_live(codes: tuple[str, ...], from_date: str, to_date: str) -> dict:
     """J-Quants から日足を取得して {code: DataFrame} を返す(キャッシュ付き).

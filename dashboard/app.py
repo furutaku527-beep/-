@@ -82,26 +82,71 @@ def filter_period(universe: dict, start, end) -> dict:
 # サイドバー(設定)
 # ----------------------------------------------------------------------- #
 from datetime import date, timedelta              # noqa: E402
-from dashboard.data_source import resolve_credentials, fetch_live  # noqa: E402
+from dashboard.data_source import (                # noqa: E402
+    resolve_credentials, fetch_live, screen_and_fetch,
+)
 
 st.sidebar.title("⚙️ 設定")
 
 saved = list_saved_codes()
 has_creds = resolve_credentials()
 
-# データソースの選択(クラウドでは「J-Quantsから取得」が主役)
-source_options = ["デモ(合成データ)", "J-Quantsから取得", "保存済みデータ"]
-default_idx = 1 if (has_creds and not saved) else (2 if saved else 0)
+# データソースの選択。手法は低位株が対象なので「自動スクリーニング」を主役にする。
+source_options = [
+    "低位株 自動スクリーニング",
+    "J-Quantsから取得(銘柄指定)",
+    "デモ(合成データ)",
+    "保存済みデータ",
+]
+default_idx = 0 if has_creds else (3 if saved else 2)
 source = st.sidebar.radio("データソース", source_options, index=default_idx)
 
 use_demo = source == "デモ(合成データ)"
 live_universe = None  # J-Quants取得時にセット
 
-if use_demo:
+# 提供範囲に収まりやすい既定期間(終了=約100日前/開始=約2年前)
+_def_to = date.today() - timedelta(days=100)
+_def_from = date.today() - timedelta(days=720)
+
+if source == "低位株 自動スクリーニング":
+    if not has_creds:
+        st.sidebar.error(
+            "APIキーが未設定です。Secrets か .env の JQUANTS_API_KEY を設定してください。"
+        )
+    st.sidebar.markdown("**スクリーニング条件**")
+    max_price = st.sidebar.number_input("上限株価(円・低位株)", 100, 5000, 1000, 100)
+    min_turn_oku = st.sidebar.slider("最小売買代金(億円)", 0.1, 10.0, 0.5, 0.1)
+    min_range = st.sidebar.slider("最小日中変動率(基準日)", 0.0, 0.15, 0.0, 0.01,
+                                  help="基準日の(高値-安値)/終値。0で無効")
+    top_n = st.sidebar.slider("採用銘柄数(上位N・売買代金順)", 5, 100, 30, 5)
+    excl_prime = st.sidebar.checkbox("プライム市場を除外", value=True)
+    snap_date = st.sidebar.date_input("スクリーニング基準日", _def_to,
+                                      help="この日の全銘柄から抽出。提供範囲外は自動調整")
+    st.sidebar.markdown("**取得期間(バックテスト用)**")
+    frm = st.sidebar.date_input("取得開始日", _def_from, key="scr_from")
+    to = st.sidebar.date_input("取得終了日", _def_to, key="scr_to")
+    if st.sidebar.button("🔎 スクリーニング & 取得", disabled=not has_creds):
+        live_universe = screen_and_fetch(
+            str(snap_date), float(max_price), min_turn_oku * 1e8, float(min_range),
+            int(top_n), bool(excl_prime), str(frm), str(to),
+        )
+        st.session_state["live_universe"] = live_universe
+    live_universe = st.session_state.get("live_universe")
+    if "_screen_table" in st.session_state and st.session_state["_screen_table"] is not None:
+        n_hit = len(st.session_state["_screen_table"])
+        st.sidebar.caption(f"抽出 {n_hit} 銘柄(売買代金上位)")
+    if "_fetch_errors" in st.session_state:
+        st.sidebar.warning("一部取得できませんでした(先頭のみ):\n"
+                           + "\n".join(st.session_state["_fetch_errors"][:5]))
+    all_codes = sorted(live_universe.keys()) if live_universe else []
+    if not all_codes:
+        st.sidebar.caption("「スクリーニング & 取得」を押すと検証できます。")
+
+elif use_demo:
     st.sidebar.info("合成データで表示中(実データではありません)")
     all_codes = ["7203", "6758", "9984", "4591", "2884"]
 
-elif source == "J-Quantsから取得":
+elif source == "J-Quantsから取得(銘柄指定)":
     if not has_creds:
         st.sidebar.error(
             "APIキーが未設定です。J-Quants ダッシュボードで発行した APIキーを "
@@ -113,12 +158,8 @@ elif source == "J-Quantsから取得":
         "銘柄コード(カンマ区切り)", "7203,6758,9984",
         help="例: 7203,6758,9984",
     )
-    # 無料プランは約12週間遅延+直近約2年。範囲外でもクライアントが自動調整するが、
-    # 初期値は提供範囲に収まりやすい値(終了=約100日前/開始=約2年前)にしておく。
-    default_to = date.today() - timedelta(days=100)
-    default_from = date.today() - timedelta(days=720)
-    frm = st.sidebar.date_input("取得開始日", default_from)
-    to = st.sidebar.date_input("取得終了日", default_to)
+    frm = st.sidebar.date_input("取得開始日", _def_from)
+    to = st.sidebar.date_input("取得終了日", _def_to)
     st.sidebar.caption("※無料プランは約12週間遅延・直近約2年。範囲外は自動調整します。")
     if st.sidebar.button("📥 データ取得 / 更新", disabled=not has_creds):
         codes = tuple(c.strip() for c in codes_text.split(",") if c.strip())
@@ -139,10 +180,10 @@ else:  # 保存済みデータ
 selected = st.sidebar.multiselect("対象銘柄", all_codes, default=all_codes)
 
 st.sidebar.subheader("戦略パラメータ")
-dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.03, 0.005,
-                            help="エントリーに必要な前日終値と5日線の乖離")
+dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.0, 0.005,
+                            help="0=押し目タッチで広くエントリー。上げると『大きな乖離からの押し目(激アツ)』に絞る")
 stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.05, 0.015, 0.005)
-min_turnover_oku = st.sidebar.slider("最小売買代金(億円)", 0.0, 10.0, 1.0, 0.5)
+min_turnover_oku = st.sidebar.slider("最小売買代金(億円・銘柄フィルタ)", 0.0, 10.0, 0.5, 0.5)
 exclude_prime = st.sidebar.checkbox(
     "プライム市場を除外(準備中)", value=False, disabled=True,
     help="市場区分データの取得が必要なため未対応。今後 listed_info から実装予定。",
@@ -163,7 +204,7 @@ apply_screening = st.sidebar.checkbox("スクリーニング適用", value=True)
 st.title("📈 5日線デイトレード手法 バックテスト")
 st.caption("シンジ氏 note手法(5日線軸)を日足で検証 — 過去データ検証であり将来の利益を保証しません")
 
-if source == "J-Quantsから取得":
+if source in ("低位株 自動スクリーニング", "J-Quantsから取得(銘柄指定)"):
     universe = {k: v for k, v in (live_universe or {}).items() if k in selected}
 else:
     universe = load_universe(tuple(selected), use_demo)
@@ -171,7 +212,7 @@ else:
 
 if not universe:
     st.warning("対象データがありません。サイドバーでデータソース・銘柄を選んでください"
-               "(J-Quants取得の場合は「データ取得」を押してください)。")
+               "(J-Quants取得/スクリーニングの場合はボタンを押してください)。")
     st.stop()
 
 # 期間の範囲を算出して日付スライダー

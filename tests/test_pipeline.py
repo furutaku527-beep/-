@@ -55,6 +55,39 @@ def test_costs_reduce_return():
     assert _apply_costs(0.02, p) < 0.02
 
 
+def test_screener_filters_low_priced_and_prime():
+    """低位株スクリーナー: 高価格/低流動性/プライムを除外する."""
+    from src.data.screener import screen_low_priced
+
+    class FakeClient:
+        def get_quotes_by_date(self, d):
+            return pd.DataFrame([
+                {"Code": "3719", "Close": 300, "High": 330, "Low": 290, "Volume": 5_000_000},
+                {"Code": "7203", "Close": 2800, "High": 2820, "Low": 2790, "Volume": 3_000_000},
+                {"Code": "9999", "Close": 400, "High": 410, "Low": 399, "Volume": 1000},
+                {"Code": "2191", "Close": 800, "High": 900, "Low": 780, "Volume": 2_000_000},
+            ])
+
+        def get_listed_info(self):
+            return pd.DataFrame([
+                {"code": "3719", "market_code_name": "グロース"},
+                {"code": "7203", "market_code_name": "プライム"},
+                {"code": "2191", "market_code_name": "スタンダード"},
+            ])
+
+    res = screen_low_priced(FakeClient(), "2025-01-10", max_price=1000,
+                            min_turnover=5e7, top_n=10, exclude_prime=True)
+    assert set(res["Code"]) == {"3719", "2191"}
+
+
+def test_dev_min_zero_yields_more_trades():
+    """乖離ゲートを0にすると、3%必須より多くのトレードが出る(忠実化)."""
+    df = make_daily(seed=3, n=300)
+    n0 = len(generate_trades(df, StrategyParams(dev_min=0.0), apply_screening=False))
+    n3 = len(generate_trades(df, StrategyParams(dev_min=0.03), apply_screening=False))
+    assert n0 >= n3
+
+
 def test_no_lookahead():
     """先読み防止: 後日のデータを足しても、過去のトレードは一切変わらない."""
     p = StrategyParams()

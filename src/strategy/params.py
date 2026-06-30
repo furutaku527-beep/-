@@ -16,7 +16,10 @@ class StrategyParams:
     ma_slow: int = 25         # 25日線
 
     # --- エントリー条件 ---
-    dev_min: float = 0.03     # エントリーに必要な最小乖離(前日終値 vs 5日線)
+    # 乖離は「リスク指標 / 期待値ブースター」であり必須ゲートではない(手法の忠実化)。
+    # 既定0.0 = 上昇中の5日線の上で押し目タッチすれば乖離量に関わらずエントリー。
+    # 値を上げると「乖離が大きい押し目(激アツ)」だけに絞り込める。
+    dev_min: float = 0.0      # エントリーに必要な最小乖離(前日終値 vs 5日線)
     open_buf: float = 0.01    # 寄り付き許容バッファ
     require_open_above: bool = True   # 寄り付きが線付近以上であることを要求
 
@@ -25,7 +28,7 @@ class StrategyParams:
 
     # --- スクリーニング ---
     min_history_days: int = 60    # IPO除外(最低営業日数)
-    min_turnover: float = 1e8     # 最小平均売買代金(円, 20日)
+    min_turnover: float = 5e7     # 最小平均売買代金(円, 20日)
     exclude_prime: bool = False   # プライム市場を除外するか
 
     # --- コスト(概算) ---
