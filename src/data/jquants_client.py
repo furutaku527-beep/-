@@ -45,6 +45,10 @@ class JQuantsError(RuntimeError):
     """J-Quants API 呼び出しに関する例外."""
 
 
+class JQuantsBadRequest(JQuantsError):
+    """400 Bad Request(パラメータ形式エラー等・リトライ不可)."""
+
+
 class JQuantsClient:
     """J-Quants API V2 の最小クライアント.
 
@@ -112,6 +116,11 @@ class JQuantsClient:
                         f"認証エラー({resp.status_code})。APIキーが正しいか、"
                         f"プランで該当データにアクセスできるか確認してください。"
                     )
+                if resp.status_code == 400:
+                    # パラメータ形式の問題。リトライせず即時に専用例外で返す
+                    raise JQuantsBadRequest(
+                        f"400 Bad Request: {resp.text[:200]}"
+                    )
                 if resp.status_code == 410:
                     raise JQuantsError(
                         "410 Gone: 旧V1エンドポイントは廃止されています。"
@@ -136,6 +145,19 @@ class JQuantsClient:
     # ------------------------------------------------------------------ #
     # 公開 API
     # ------------------------------------------------------------------ #
+    def _fetch_all(self, path: str, params: dict) -> list[dict]:
+        """pagination_key を辿って全件取得して data 配列を結合."""
+        rows: list[dict] = []
+        p = dict(params)
+        while True:
+            data = self._get(path, params=p)
+            rows.extend(data.get("data", []))
+            key = data.get("pagination_key")
+            if not key:
+                break
+            p = {**p, "pagination_key": key}
+        return rows
+
     def get_listed_info(self, code: Optional[str] = None) -> pd.DataFrame:
         """上場銘柄マスタ(V2: /equities/master)."""
         params = {"code": code} if code else None
@@ -165,19 +187,26 @@ class JQuantsClient:
             V2 の adjustment_factor 列があれば併せて保持する。
             pagination_key を辿って全件取得する。
         """
-        params = {
-            "code": code,
-            "from": _to_ymd(from_date),
-            "to": _to_ymd(to_date),
-        }
+        # 日付形式はハイフン付き("2024-01-31")を第一候補、ハイフン無し
+        # ("20240131")を予備にして、400が出たら自動で切り替える(両対応)。
+        date_formats = ["%Y-%m-%d", "%Y%m%d"]
+        last_err: Optional[JQuantsBadRequest] = None
         rows: list[dict] = []
-        while True:
-            data = self._get("/equities/bars/daily", params=params)
-            rows.extend(data.get("data", []))
-            key = data.get("pagination_key")
-            if not key:
+        for fmt in date_formats:
+            params = {
+                "code": code,
+                "from": _fmt_date(from_date, fmt),
+                "to": _fmt_date(to_date, fmt),
+            }
+            try:
+                rows = self._fetch_all("/equities/bars/daily", params)
+                last_err = None
                 break
-            params = {**params, "pagination_key": key}
+            except JQuantsBadRequest as exc:
+                last_err = exc  # 次の日付形式で再挑戦
+                continue
+        if last_err is not None:
+            raise last_err
 
         df = pd.DataFrame(rows)
         if df.empty:
@@ -191,9 +220,16 @@ class JQuantsClient:
         return df
 
 
-def _to_ymd(value: str | date) -> str:
-    """J-Quants V2 の from/to は YYYYMMDD 形式を採用する."""
+def _fmt_date(value: str | date, fmt: str) -> str:
+    """日付を指定 strftime 形式の文字列にする.
+
+    入力が date/datetime ならそのまま整形。文字列なら一旦 8桁数字に正規化して
+    から date に直し、目的の形式へ変換する(ハイフン有無の揺れを吸収)。
+    """
     if isinstance(value, (date, datetime)):
-        return value.strftime("%Y%m%d")
-    # "2024-01-01" など区切り付き文字列はハイフン等を除去
-    return "".join(ch for ch in str(value) if ch.isdigit())
+        return value.strftime(fmt)
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    if len(digits) >= 8:
+        d = datetime.strptime(digits[:8], "%Y%m%d")
+        return d.strftime(fmt)
+    return str(value)
