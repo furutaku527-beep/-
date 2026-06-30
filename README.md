@@ -31,14 +31,20 @@ strategy.md      検証する手法の定義(※手法のnote共有後に作成)
 # 1. 依存パッケージ
 pip install -r requirements.txt
 
-# 2. J-Quants の認証情報を設定
+# 2. J-Quants の APIキーを設定(V2)
 cp .env.example .env
-#   .env を編集し、登録メールアドレス / パスワードを記入
+#   J-Quants ダッシュボードで発行した APIキーを .env の JQUANTS_API_KEY に記入
 #   (.env は .gitignore でコミット対象外)
 
 # 3. 接続テスト
 python scripts/fetch_data.py --check
 ```
+
+### J-Quants API V2 について(重要)
+
+- **2026年6月1日に V1 API は廃止**され、**V2 API(APIキー方式)**に移行しました。
+- 認証はメール/パスワードではなく、**ダッシュボードで発行する APIキー**(`x-api-key`)です。
+- ベースURL `https://api.jquants.com/v2`、日足は `/equities/bars/daily`。
 
 ### J-Quants 無料プランについて
 

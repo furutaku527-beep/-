@@ -104,8 +104,9 @@ if use_demo:
 elif source == "J-Quantsから取得":
     if not has_creds:
         st.sidebar.error(
-            "認証情報が未設定です。Streamlit Secrets か .env に "
-            "JQUANTS_MAILADDRESS / JQUANTS_PASSWORD を設定してください。"
+            "APIキーが未設定です。J-Quants ダッシュボードで発行した APIキーを "
+            "Streamlit Secrets か .env の JQUANTS_API_KEY に設定してください。"
+            "(2026年6月にメール/パスワード方式は廃止されAPIキー方式になりました)"
         )
         st.sidebar.caption("(設定済みなら再読み込みしてください)")
     codes_text = st.sidebar.text_input(

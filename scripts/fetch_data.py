@@ -2,7 +2,7 @@
 """J-Quants から日足データを取得してローカル保存する CLI.
 
 使い方:
-    # .env に JQUANTS_MAILADDRESS / JQUANTS_PASSWORD を設定してから
+    # .env に JQUANTS_API_KEY(V2のAPIキー)を設定してから
     python scripts/fetch_data.py --codes 7203 6758 9984 --from 2023-01-01 --to 2024-12-31
 
     # 接続テストだけ(1銘柄を少しだけ取得して表示)
@@ -64,9 +64,9 @@ def _connection_check(client: JQuantsClient) -> int:
     print("J-Quants 接続テスト中...")
     try:
         client.authenticate()
-        print("  認証 OK (idToken 取得成功)")
+        print("  APIキー設定 OK")
         to = date.today()
-        frm = to - timedelta(days=30)
+        frm = to - timedelta(days=90)
         df = client.get_daily_quotes("7203", frm, to)
         print(f"  7203(トヨタ)直近30日: {len(df)} 件取得")
         if not df.empty:

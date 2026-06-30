@@ -21,25 +21,23 @@ from src.data.config import load_env
 
 
 def resolve_credentials() -> bool:
-    """認証情報を os.environ に用意できれば True.
+    """APIキーを os.environ に用意できれば True.
 
     Streamlit Secrets があれば環境変数へ橋渡しする。なければ .env/環境変数を読む。
+    V2 API は単一の APIキー(JQUANTS_API_KEY)で認証する。
     """
     # 1) Streamlit Secrets(無い環境では参照時に例外が出るため try)
     try:
         secrets = st.secrets
-        for key in ("JQUANTS_MAILADDRESS", "JQUANTS_PASSWORD", "JQUANTS_REFRESH_TOKEN"):
-            if key in secrets and secrets[key]:
-                os.environ[key] = str(secrets[key])
+        if "JQUANTS_API_KEY" in secrets and secrets["JQUANTS_API_KEY"]:
+            os.environ["JQUANTS_API_KEY"] = str(secrets["JQUANTS_API_KEY"])
     except Exception:
         pass
 
     # 2) .env / 環境変数
     load_env()
 
-    has_pair = bool(os.environ.get("JQUANTS_MAILADDRESS") and os.environ.get("JQUANTS_PASSWORD"))
-    has_token = bool(os.environ.get("JQUANTS_REFRESH_TOKEN"))
-    return has_pair or has_token
+    return bool(os.environ.get("JQUANTS_API_KEY"))
 
 
 @st.cache_data(show_spinner="J-Quants からデータ取得中...", ttl=3600)
