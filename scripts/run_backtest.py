@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.strategy import StrategyParams                       # noqa: E402
 from src.backtest import run_backtest, BacktestConfig         # noqa: E402
-from src.report import compute_metrics, format_metrics, plot_equity_curve  # noqa: E402
+from src.report import compute_metrics, format_metrics, plot_equity_curve, build_html_report  # noqa: E402
 from src.data import load_daily, list_saved_codes             # noqa: E402
 
 
@@ -33,6 +33,8 @@ def main() -> int:
     parser.add_argument("--no-screening", action="store_true", help="スクリーニング無効化")
     parser.add_argument("--dev-min", type=float, default=None, help="最小乖離(既定0.03)")
     parser.add_argument("--out", default="output/equity.png", help="エクイティカーブ出力先")
+    parser.add_argument("--html", default="output/report.html",
+                        help="スマホ向けHTMLレポート出力先")
     args = parser.parse_args()
 
     params = StrategyParams()
@@ -54,6 +56,12 @@ def main() -> int:
 
     path = plot_equity_curve(result, args.out)
     print(f"\nエクイティカーブを保存: {path}")
+
+    html_path = build_html_report(
+        result, args.html, subtitle=f"{len(universe)}銘柄 {_period(universe)}",
+        is_demo=args.demo,
+    )
+    print(f"スマホ向けHTMLレポートを保存: {html_path}")
     return 0
 
 

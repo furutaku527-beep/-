@@ -29,7 +29,26 @@ from src.backtest import run_backtest, BacktestConfig         # noqa: E402
 from src.report import compute_metrics                        # noqa: E402
 from src.data import load_daily, list_saved_codes             # noqa: E402
 
-st.set_page_config(page_title="5日線デイトレ検証", layout="wide")
+st.set_page_config(
+    page_title="5日線デイトレ検証",
+    page_icon="📈",
+    layout="centered",          # iPhone縦画面で読みやすい
+    initial_sidebar_state="collapsed",  # スマホは設定をたたんで開始
+)
+
+# スマホ表示の微調整(余白圧縮・タブ折返し・テーブル文字サイズ)
+st.markdown(
+    """
+    <style>
+      .block-container { padding-top: 1.2rem; padding-bottom: 2rem; }
+      [data-testid="stMetricValue"] { font-size: 1.15rem; }
+      [data-testid="stMetricLabel"] { font-size: .75rem; }
+      .stTabs [data-baseweb="tab"] { padding: 6px 10px; }
+      [data-testid="stDataFrame"] { font-size: .8rem; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # ----------------------------------------------------------------------- #
@@ -133,82 +152,84 @@ equity = result["equity"]
 
 
 # ----------------------------------------------------------------------- #
-# サマリー指標
+# 表示(スマホ向け: タブで縦スクロールを最小化)
 # ----------------------------------------------------------------------- #
-st.subheader("サマリー指標")
 pf = metrics["profit_factor"]
 pf_s = "∞" if pf == float("inf") else f"{pf:.2f}"
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("トレード件数", f"{metrics['n_trades']}")
-c2.metric("勝率", f"{metrics['win_rate']*100:.1f}%")
-c3.metric("損益合計", f"{metrics['total_pnl']:+,.0f} 円")
-c4.metric("プロフィットファクター", pf_s)
+tab_sum, tab_chart, tab_trades = st.tabs(["📊 サマリー", "📈 資産推移", "📋 トレード"])
 
-c5, c6, c7, c8 = st.columns(4)
-c5.metric("最終資産", f"{metrics['final_equity']:,.0f} 円", f"{metrics['return_pct']*100:+.1f}%")
-c6.metric("最大ドローダウン", f"{metrics['max_drawdown_pct']*100:.1f}%",
-          f"{metrics['max_drawdown']:,.0f} 円")
-c7.metric("期待値/トレード", f"{metrics['expectancy']:+,.0f} 円")
-c8.metric("日次シャープ(年率)", f"{metrics['sharpe_daily']:.2f}")
+with tab_sum:
+    # 2列グリッド(iPhone縦画面で見やすい)
+    a1, a2 = st.columns(2)
+    a1.metric("トレード件数", f"{metrics['n_trades']}")
+    a2.metric("勝率", f"{metrics['win_rate']*100:.1f}%")
+    b1, b2 = st.columns(2)
+    b1.metric("損益合計", f"{metrics['total_pnl']:+,.0f} 円")
+    b2.metric("プロフィットファクター", pf_s)
+    c1, c2 = st.columns(2)
+    c1.metric("最終資産", f"{metrics['final_equity']:,.0f} 円", f"{metrics['return_pct']*100:+.1f}%")
+    c2.metric("最大DD", f"{metrics['max_drawdown_pct']*100:.1f}%",
+              f"{metrics['max_drawdown']:,.0f} 円")
+    d1, d2 = st.columns(2)
+    d1.metric("期待値/トレード", f"{metrics['expectancy']:+,.0f} 円")
+    d2.metric("日次シャープ(年率)", f"{metrics['sharpe_daily']:.2f}")
 
+with tab_chart:
+    if equity.empty:
+        st.info("この条件ではトレードが発生しませんでした。乖離やスクリーニング条件を緩めてみてください。")
+    else:
+        eq = equity.copy()
+        eq["Date"] = pd.to_datetime(eq["Date"])
+        eq["peak"] = eq["equity"].cummax()
+        eq["dd_pct"] = (eq["equity"] - eq["peak"]) / eq["peak"] * 100
 
-# ----------------------------------------------------------------------- #
-# エクイティカーブ
-# ----------------------------------------------------------------------- #
-st.subheader("資産推移(エクイティカーブ)")
-if equity.empty:
-    st.info("この条件ではトレードが発生しませんでした。乖離やスクリーニング条件を緩めてみてください。")
-else:
-    eq = equity.copy()
-    eq["Date"] = pd.to_datetime(eq["Date"])
-    eq["peak"] = eq["equity"].cummax()
-    eq["dd_pct"] = (eq["equity"] - eq["peak"]) / eq["peak"] * 100
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=eq["Date"], y=eq["equity"], mode="lines",
+                                 name="資産", line=dict(color="#1f77b4")))
+        fig.add_trace(go.Scatter(x=eq["Date"], y=eq["peak"], mode="lines",
+                                 name="ピーク", line=dict(color="#bbbbbb", dash="dot")))
+        fig.add_hline(y=initial_capital, line_dash="dash", line_color="gray",
+                      annotation_text="初期資金")
+        fig.update_layout(height=320, margin=dict(l=6, r=6, t=24, b=6),
+                          legend=dict(orientation="h"), font=dict(size=12))
+        st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=eq["Date"], y=eq["equity"], mode="lines",
-                             name="資産", line=dict(color="#1f77b4")))
-    fig.add_trace(go.Scatter(x=eq["Date"], y=eq["peak"], mode="lines",
-                             name="ピーク", line=dict(color="#bbbbbb", dash="dot")))
-    fig.add_hline(y=initial_capital, line_dash="dash", line_color="gray",
-                  annotation_text="初期資金")
-    fig.update_layout(height=380, margin=dict(l=10, r=10, t=30, b=10),
-                      legend=dict(orientation="h"))
-    st.plotly_chart(fig, width='stretch')
+        fig_dd = go.Figure()
+        fig_dd.add_trace(go.Scatter(x=eq["Date"], y=eq["dd_pct"], fill="tozeroy",
+                                    line=dict(color="#d62728"), name="ドローダウン"))
+        fig_dd.update_layout(height=180, margin=dict(l=6, r=6, t=6, b=6),
+                             yaxis_title="DD (%)", font=dict(size=12))
+        st.plotly_chart(fig_dd, width='stretch', config={"displayModeBar": False})
 
-    fig_dd = go.Figure()
-    fig_dd.add_trace(go.Scatter(x=eq["Date"], y=eq["dd_pct"], fill="tozeroy",
-                                line=dict(color="#d62728"), name="ドローダウン"))
-    fig_dd.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10),
-                         yaxis_title="DD (%)")
-    st.plotly_chart(fig_dd, width='stretch')
-
-
-# ----------------------------------------------------------------------- #
-# トレード一覧
-# ----------------------------------------------------------------------- #
-st.subheader("個別トレード一覧")
-if trades.empty:
-    st.info("トレードなし")
-else:
-    show = trades.copy()
-    show["Date"] = pd.to_datetime(show["Date"]).dt.date
-    show = show.rename(columns={
-        "Date": "日付", "Code": "銘柄", "entry": "エントリー", "exit": "エグジット",
-        "exit_reason": "決済理由", "dev_fast": "乖離", "ret_net": "リターン(正味)",
-        "pnl": "損益(円)", "equity_after": "約定後資産",
-    })
-    show["乖離"] = (show["乖離"] * 100).round(2).astype(str) + "%"
-    show["リターン(正味)"] = (show["リターン(正味)"] * 100).round(2).astype(str) + "%"
-    cols = ["日付", "銘柄", "エントリー", "エグジット", "決済理由", "乖離",
-            "リターン(正味)", "損益(円)", "約定後資産"]
-    st.dataframe(
-        show[cols].style.format({"損益(円)": "{:+,.0f}", "約定後資産": "{:,.0f}",
-                                 "エントリー": "{:,.1f}", "エグジット": "{:,.1f}"}),
-        width='stretch', height=360,
-    )
-    csv = trades.to_csv(index=False).encode("utf-8-sig")
-    st.download_button("トレード明細をCSVダウンロード", csv, "trades.csv", "text/csv")
+with tab_trades:
+    if trades.empty:
+        st.info("トレードなし")
+    else:
+        show = trades.copy()
+        show["Date"] = pd.to_datetime(show["Date"]).dt.date
+        show = show.rename(columns={
+            "Date": "日付", "Code": "銘柄", "entry": "エントリー", "exit": "エグジット",
+            "exit_reason": "決済理由", "dev_fast": "乖離", "ret_net": "リターン(正味)",
+            "pnl": "損益(円)", "equity_after": "約定後資産",
+        })
+        show["決済理由"] = show["決済理由"].map({"close": "引け", "stop": "損切"})
+        show["乖離"] = (show["乖離"] * 100).round(2).astype(str) + "%"
+        show["リターン(正味)"] = (show["リターン(正味)"] * 100).round(2).astype(str) + "%"
+        # スマホは横スクロールが負担なので主要列だけ既定表示にできるトグル
+        compact = st.checkbox("主要列のみ表示(スマホ向け)", value=True)
+        if compact:
+            cols = ["日付", "銘柄", "決済理由", "乖離", "損益(円)"]
+        else:
+            cols = ["日付", "銘柄", "エントリー", "エグジット", "決済理由", "乖離",
+                    "リターン(正味)", "損益(円)", "約定後資産"]
+        st.dataframe(
+            show[cols].style.format({"損益(円)": "{:+,.0f}", "約定後資産": "{:,.0f}",
+                                     "エントリー": "{:,.1f}", "エグジット": "{:,.1f}"}),
+            width='stretch', height=420,
+        )
+        csv = trades.to_csv(index=False).encode("utf-8-sig")
+        st.download_button("トレード明細をCSVダウンロード", csv, "trades.csv", "text/csv")
 
 with st.expander("ℹ️ 手法と検証範囲について"):
     st.markdown(

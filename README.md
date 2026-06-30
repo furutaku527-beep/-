@@ -62,9 +62,16 @@ python scripts/run_backtest.py --demo
 
 # 3. ダッシュボード(ブラウザ・PC/iPhone対応)
 streamlit run dashboard/app.py
-#   スマホからは表示される Network URL にアクセス(同一Wi-Fi)
-#   外出先からは --server.address 0.0.0.0 + トンネル等
+
+# 3'. スマホ向け静的HTMLレポート(サーバ不要・すぐ見られる)
+python scripts/run_backtest.py --demo   # → output/report.html
 ```
+
+### 📱 iPhone での確認方法
+`docs/iPhoneで確認する方法.md` に3通りまとめています:
+- **方法A**: `output/report.html` を見る(最速・静的)
+- **方法B**: Streamlit Community Cloud にデプロイ → iPhoneブラウザでURLを開いて操作(推奨)
+- **方法C**: ローカルPCで起動し同一Wi-FiのiPhoneから閲覧
 
 ### ダッシュボードでできること
 - 資産推移グラフ(エクイティカーブ)+ ドローダウン

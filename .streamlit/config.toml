@@ -1,0 +1,13 @@
+# Streamlit 設定(スマホ表示・テーマ)
+[theme]
+base = "light"
+primaryColor = "#1f77b4"
+
+[server]
+# Streamlit Community Cloud / 外部公開時の推奨設定
+headless = true
+# ローカルでスマホからLAN内アクセスする場合は下を有効化:
+# address = "0.0.0.0"
+
+[browser]
+gatherUsageStats = false
