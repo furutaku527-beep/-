@@ -98,14 +98,23 @@ def generate_trades(
 
         entry = line                                    # 線で拾う想定
         stop = line * (1 - p.stop_pct)
+        tp_price = entry * (1 + p.take_profit_pct) if p.take_profit_pct > 0 else None
 
         # --- 決済(当日内で完結)---
-        if cur["Low"] < stop:
-            exit_price = stop                           # 線割れ → 損切
-            reason = "stop"
+        hit_stop = cur["Low"] < stop
+        hit_tp = tp_price is not None and cur["High"] >= tp_price
+        if hit_stop and hit_tp:
+            # 同日に両到達 → 日足では順序不明。優先を設定に従う
+            if p.tp_stop_priority == "tp":
+                exit_price, reason = tp_price, "tp"
+            else:
+                exit_price, reason = stop, "stop"
+        elif hit_tp:
+            exit_price, reason = tp_price, "tp"          # 日中に目標到達 → 利確
+        elif hit_stop:
+            exit_price, reason = stop, "stop"            # 線割れ → 損切
         else:
-            exit_price = cur["Close"]                   # 引け決済
-            reason = "close"
+            exit_price, reason = cur["Close"], "close"   # 引け決済
 
         ret_gross = exit_price / entry - 1.0
         rows.append(

@@ -224,7 +224,14 @@ selected = st.sidebar.multiselect("対象銘柄", all_codes, default=all_codes)
 st.sidebar.subheader("戦略パラメータ")
 dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.0, 0.005,
                             help="0=押し目タッチで広くエントリー。上げると『大きな乖離からの押し目(激アツ)』に絞る")
-stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.05, 0.015, 0.005)
+stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.08, 0.03, 0.005,
+                             help="低位株はノイズが大きいので広め推奨(狭いと刈られやすい)")
+take_profit = st.sidebar.slider("利確幅 take_profit(0=無効)", 0.0, 0.10, 0.0, 0.005,
+                                help=">0で日中高値が目標に届いたら利確(スキャル的)。0は引けまで保有")
+tp_priority = st.sidebar.selectbox(
+    "同日にTP/損切り両到達時の優先", ["stop(保守)", "tp(楽観)"], index=0,
+    help="日足では日中の順序が不明なため。stop=保守的",
+)
 min_turnover_oku = st.sidebar.slider("最小売買代金(億円・銘柄フィルタ)", 0.0, 10.0, 0.5, 0.5)
 exclude_prime = st.sidebar.checkbox(
     "プライム市場を除外(準備中)", value=False, disabled=True,
@@ -270,6 +277,8 @@ if not universe:
 params = StrategyParams(
     dev_min=dev_min, stop_pct=stop_pct, min_turnover=min_turnover_oku * 1e8,
     exclude_prime=exclude_prime, fee_rate=fee_rate, slippage_pct=slippage,
+    take_profit_pct=take_profit,
+    tp_stop_priority="tp" if tp_priority.startswith("tp") else "stop",
 )
 config = BacktestConfig(initial_capital=initial_capital, position_frac=position_frac)
 
@@ -353,7 +362,9 @@ with tab_trades:
             "exit_reason": "決済理由", "dev_fast": "乖離", "ret_net": "リターン(正味)",
             "pnl": "損益(円)", "equity_after": "約定後資産",
         })
-        show["決済理由"] = show["決済理由"].map({"close": "引け", "stop": "損切"})
+        show["決済理由"] = show["決済理由"].map(
+            {"close": "引け", "stop": "損切", "tp": "利確"}
+        )
         show["乖離"] = (show["乖離"] * 100).round(2).astype(str) + "%"
         show["リターン(正味)"] = (show["リターン(正味)"] * 100).round(2).astype(str) + "%"
         # スマホは横スクロールが負担なので主要列だけ既定表示にできるトグル

@@ -24,7 +24,15 @@ class StrategyParams:
     require_open_above: bool = True   # 寄り付きが線付近以上であることを要求
 
     # --- 損切り ---
-    stop_pct: float = 0.015   # 5日線割れ損切り幅
+    stop_pct: float = 0.03    # 5日線割れ損切り幅(低位株はノイズが大きいので広め)
+
+    # --- 利確(take-profit)---
+    # >0 で有効。日中の高値が entry*(1+take_profit) に届いたらそこで利確(スキャル的)。
+    # 0 なら従来どおり引け決済まで持つ。
+    take_profit_pct: float = 0.0
+    # 同日にTPと損切りの両方に到達した場合の優先(日足では順序不明のため)。
+    # "stop"=保守的に損切り優先 / "tp"=利確優先(楽観)。
+    tp_stop_priority: str = "stop"
 
     # --- スクリーニング ---
     min_history_days: int = 60    # IPO除外(最低営業日数)
