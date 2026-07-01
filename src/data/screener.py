@@ -22,13 +22,20 @@ from .jquants_client import JQuantsClient
 # 上場マスタで銘柄コードを表しうる列名の候補
 _CODE_COL_CANDIDATES = ["code", "Code", "local_code", "LocalCode", "ticker", "Ticker"]
 
-# 上場マスタで市場区分を表しうる列名の候補(V2の正確な列名が不明なため複数試す)
+# 上場マスタで市場区分を表しうる列名の候補
+# (V2実データの列は Mkt / MktNm。他仕様も一応拾えるよう複数試す)
 _MARKET_COL_CANDIDATES = [
+    "MktNm", "Mkt",
     "market_code_name", "MarketCodeName", "market_name",
     "market_code", "MarketCode", "market", "Market",
 ]
 # 「プライム」を示す値の候補(コード/名称どちらでも拾えるように)
 _PRIME_TOKENS = ["prime", "プライム", "0111"]  # 0111 は東証プライムのコード
+
+# 規模カテゴリ列(大型株を事前除外して取得の無駄打ちを減らす)
+_SCALE_COL_CANDIDATES = ["ScaleCat", "ScaleCategory", "scale_category"]
+# 除外したい大型寄りの規模トークン
+_LARGE_SCALE_TOKENS = ["large", "core", "大型", "topix 100", "topix100", "mid", "中型"]
 
 
 def _market_series(master: pd.DataFrame) -> Optional[pd.Series]:
@@ -72,17 +79,29 @@ def select_nonprime_codes(
             diag["code_col_found"] = False
         return []
 
-    codes_df = master[[code_col]].astype(str).rename(columns={code_col: "_code"})
+    keep = pd.Series(True, index=master.index)
+
+    # プライム市場を除外
     mkt = _market_series(master)
-    if exclude_prime and mkt is not None:
-        keep = ~mkt.str.lower().apply(lambda v: any(t in v for t in _PRIME_TOKENS))
-        codes = master.loc[keep.values, code_col].astype(str).tolist()
-        if diag is not None:
-            diag["nonprime_codes"] = int(len(codes))
-    else:
-        codes = codes_df["_code"].tolist()
-        if diag is not None and exclude_prime:
+    if exclude_prime:
+        if mkt is not None:
+            keep &= ~mkt.str.lower().apply(lambda v: any(t in v for t in _PRIME_TOKENS))
+            if diag is not None:
+                diag["market_col_found"] = True
+        elif diag is not None:
             diag["market_col_found"] = False
+
+    # 大型株(規模カテゴリ)を事前除外して、低位株の当たりを増やす
+    scale_col = next((c for c in _SCALE_COL_CANDIDATES if c in master.columns), None)
+    if scale_col is not None:
+        scale = master[scale_col].astype(str).str.lower()
+        keep &= ~scale.apply(lambda v: any(t in v for t in _LARGE_SCALE_TOKENS))
+        if diag is not None:
+            diag["scale_col"] = scale_col
+
+    codes = master.loc[keep.values, code_col].astype(str).tolist()
+    if diag is not None:
+        diag["nonprime_codes"] = int(len(codes))
 
     # 5桁→4桁の重複や欠損を除き、決定的にシャッフル
     codes = [c for c in dict.fromkeys(codes) if c and c.lower() != "nan"]

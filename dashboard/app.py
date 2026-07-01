@@ -121,11 +121,15 @@ if source == "低位株 自動スクリーニング":
     min_turn_oku = st.sidebar.slider("最小売買代金(億円)", 0.1, 10.0, 0.5, 0.1)
     min_range = st.sidebar.slider("最小日中変動率", 0.0, 0.15, 0.0, 0.01,
                                   help="直近20日平均の(高値-安値)/終値。0で無効")
-    top_n = st.sidebar.slider("採用銘柄数(条件を満たす上位)", 5, 60, 30, 5)
+    top_n = st.sidebar.slider("採用銘柄数(条件を満たす上位)", 5, 40, 15, 5)
     scan_limit = st.sidebar.slider("走査する銘柄数(多いほど精度↑/時間↑)",
-                                   20, 200, 80, 10,
-                                   help="マスタからこの件数まで個別取得して選別")
+                                   10, 100, 30, 5,
+                                   help="無料プランはレート制限が厳しいため控えめ推奨")
     excl_prime = st.sidebar.checkbox("プライム市場を除外", value=True)
+    st.sidebar.caption(
+        "⚠️ 無料プランはレート制限あり。1件ずつ約0.8秒間隔で取得します"
+        "(30銘柄で約30秒)。429が出たら数分おいて再実行してください。"
+    )
     st.sidebar.markdown("**取得期間(バックテスト用)**")
     frm = st.sidebar.date_input("取得開始日", _def_from, key="scr_from")
     to = st.sidebar.date_input("取得終了日", _def_to, key="scr_to")

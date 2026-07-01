@@ -129,7 +129,12 @@ class JQuantsClient:
                     )
                 if resp.status_code == 429:  # レート制限
                     last_exc = JQuantsError("429 レート制限")
-                    self._sleep_backoff(attempt)
+                    # Retry-After があれば尊重(最大60秒)、無ければ指数バックオフ
+                    retry_after = resp.headers.get("Retry-After")
+                    if retry_after and str(retry_after).isdigit():
+                        time.sleep(min(int(retry_after), 60))
+                    else:
+                        self._sleep_backoff(attempt)
                     continue
                 # その他の 4xx はクライアント側の問題なのでリトライせず即時に返す
                 if 400 <= resp.status_code < 500:
