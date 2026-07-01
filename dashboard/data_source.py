@@ -40,7 +40,29 @@ def resolve_credentials() -> bool:
     return bool(os.environ.get("JQUANTS_API_KEY"))
 
 
-@st.cache_data(show_spinner="低位株をスキャン中(マスタ→個別取得)...", ttl=3600)
+@st.cache_data(show_spinner=False, ttl=3600)
+def _nonprime_codes_cached(exclude_prime: bool, fallback_date: str):
+    """非プライム銘柄コード一覧(+診断)をキャッシュ付きで取得."""
+    from src.data.screener import select_nonprime_codes
+
+    client = JQuantsClient.from_env()
+    diag: dict = {}
+    try:
+        codes = select_nonprime_codes(
+            client, exclude_prime=exclude_prime, fallback_date=fallback_date, diag=diag,
+        )
+    except Exception as exc:  # noqa: BLE001 - 画面に原因を出すため握る
+        diag["master_error"] = str(exc)[:300]
+        codes = []
+    return codes, diag
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _fetch_one_cached(code: str, from_date: str, to_date: str) -> pd.DataFrame:
+    """1銘柄の日足をキャッシュ付きで取得(再実行時は即返る)."""
+    return JQuantsClient.from_env().get_daily_quotes(code, from_date, to_date)
+
+
 def screen_and_fetch(
     max_price: float,
     min_turnover: float,
@@ -50,27 +72,23 @@ def screen_and_fetch(
     exclude_prime: bool,
     from_date: str,
     to_date: str,
+    progress_cb=None,
 ) -> dict:
-    """無料プラン対応のスクリーニング.
+    """無料プラン対応のスクリーニング(進捗コールバック対応).
 
-    全銘柄一括スナップショットは無料プランで取れないため、上場マスタ(無料可)から
-    非プライム銘柄を作り、個別に日足を取得しながら低位・流動性・ボラで選別する。
-    scan_limit 件まで走査し、条件を満たす銘柄を top_n 件集める。
+    上場マスタ(無料可)から非プライム銘柄を作り、個別に日足を取得しながら
+    低位・流動性・ボラで選別する。scan_limit 件まで走査し top_n 件集める。
+    progress_cb(scanned, total, selected, code) が渡されれば都度呼ぶ。
     """
-    from src.data.screener import select_nonprime_codes, qualifies_low_priced
+    from src.data.screener import qualifies_low_priced
 
-    client = JQuantsClient.from_env()
-    diag: dict = {}
-    try:
-        codes = select_nonprime_codes(
-            client, exclude_prime=exclude_prime, fallback_date=to_date, diag=diag,
-        )
-    except Exception as exc:  # noqa: BLE001 - 画面に原因を出すため握る
-        diag["master_error"] = str(exc)[:300]
+    codes, diag = _nonprime_codes_cached(exclude_prime, to_date)
+    if not codes:
         st.session_state["_screen_diag"] = diag
         st.session_state["_screen_table"] = pd.DataFrame()
         return {}
 
+    total = min(scan_limit, len(codes))
     universe: dict[str, pd.DataFrame] = {}
     errors: list[str] = []
     scanned = 0
@@ -78,8 +96,10 @@ def screen_and_fetch(
         if scanned >= scan_limit or len(universe) >= top_n:
             break
         scanned += 1
+        if progress_cb is not None:
+            progress_cb(scanned, total, len(universe), c)
         try:
-            df = client.get_daily_quotes(c, from_date, to_date)
+            df = _fetch_one_cached(c, from_date, to_date)
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{c}: {exc}")
             continue

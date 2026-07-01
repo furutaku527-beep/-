@@ -130,10 +130,25 @@ if source == "低位株 自動スクリーニング":
     frm = st.sidebar.date_input("取得開始日", _def_from, key="scr_from")
     to = st.sidebar.date_input("取得終了日", _def_to, key="scr_to")
     if st.sidebar.button("🔎 スクリーニング & 取得", disabled=not has_creds):
+        prog = st.sidebar.progress(0.0, text="準備中(銘柄マスタ取得)...")
+        status = st.sidebar.empty()
+
+        def _cb(scanned, total, selected, code):
+            frac = min(scanned / max(total, 1), 1.0)
+            prog.progress(frac, text=f"走査 {scanned}/{total}")
+            status.info(f"🔎 走査 {scanned}/{total} ・ 選別 {selected}銘柄 ・ 現在 {code}")
+
         live_universe = screen_and_fetch(
             float(max_price), min_turn_oku * 1e8, float(min_range),
             int(top_n), int(scan_limit), bool(excl_prime), str(frm), str(to),
+            progress_cb=_cb,
         )
+        prog.progress(1.0, text="完了")
+        n_sel = len(live_universe)
+        if n_sel:
+            status.success(f"✅ 完了: {n_sel}銘柄を選別しました")
+        else:
+            status.warning("⚠️ 条件を満たす銘柄が0件でした(下の診断を確認)")
         st.session_state["live_universe"] = live_universe
     live_universe = st.session_state.get("live_universe")
     if "_screen_table" in st.session_state and st.session_state["_screen_table"] is not None:
