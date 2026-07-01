@@ -61,7 +61,15 @@ def screen_and_fetch(
 
     client = JQuantsClient.from_env()
     diag: dict = {}
-    codes = select_nonprime_codes(client, exclude_prime=exclude_prime, diag=diag)
+    try:
+        codes = select_nonprime_codes(
+            client, exclude_prime=exclude_prime, fallback_date=to_date, diag=diag,
+        )
+    except Exception as exc:  # noqa: BLE001 - 画面に原因を出すため握る
+        diag["master_error"] = str(exc)[:300]
+        st.session_state["_screen_diag"] = diag
+        st.session_state["_screen_table"] = pd.DataFrame()
+        return {}
 
     universe: dict[str, pd.DataFrame] = {}
     errors: list[str] = []

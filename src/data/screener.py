@@ -47,14 +47,22 @@ def select_nonprime_codes(
     *,
     exclude_prime: bool = True,
     seed: int = 42,
+    fallback_date: Optional[str] = None,
     diag: Optional[dict] = None,
 ) -> list[str]:
     """上場マスタ(無料プランで取得可)から銘柄コード一覧を作る.
 
     プライム市場をベストエフォートで除外し、市場全体を満遍なくサンプリングするため
     決定的にシャッフルして返す(キャッシュと再現性のため seed 固定)。
+    マスタが日付必須の場合に備え、失敗時は fallback_date 付きで再試行する。
     """
-    master = client.get_listed_info()
+    try:
+        master = client.get_listed_info()
+    except Exception as exc:  # noqa: BLE001
+        if fallback_date:
+            master = client.get_listed_info(date=fallback_date)  # 日付付きで再試行
+        else:
+            raise
     if diag is not None:
         diag["master_rows"] = int(len(master))
         diag["master_columns"] = list(master.columns)

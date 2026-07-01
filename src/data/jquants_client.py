@@ -131,7 +131,18 @@ class JQuantsClient:
                     last_exc = JQuantsError("429 レート制限")
                     self._sleep_backoff(attempt)
                     continue
-                resp.raise_for_status()
+                # その他の 4xx はクライアント側の問題なのでリトライせず即時に返す
+                if 400 <= resp.status_code < 500:
+                    raise JQuantsError(
+                        f"{resp.status_code} クライアントエラー: {resp.text[:200]}"
+                    )
+                # 5xx はサーバ側。ステータスを控えてバックオフ再試行
+                if resp.status_code >= 500:
+                    last_exc = JQuantsError(
+                        f"{resp.status_code} サーバエラー: {resp.text[:150]}"
+                    )
+                    self._sleep_backoff(attempt)
+                    continue
                 return resp.json()
             except JQuantsError:
                 raise
@@ -161,10 +172,19 @@ class JQuantsClient:
             p = {**p, "pagination_key": key}
         return rows
 
-    def get_listed_info(self, code: Optional[str] = None) -> pd.DataFrame:
-        """上場銘柄マスタ(V2: /equities/master)."""
-        params = {"code": code} if code else None
-        data = self._get("/equities/master", params=params)
+    def get_listed_info(
+        self, code: Optional[str] = None, date: Optional[str] = None
+    ) -> pd.DataFrame:
+        """上場銘柄マスタ(V2: /equities/master).
+
+        date を指定できる(日付必須のプラン/仕様に備えたフォールバック用)。
+        """
+        params = {}
+        if code:
+            params["code"] = code
+        if date:
+            params["date"] = date
+        data = self._get("/equities/master", params=params or None)
         rows = data.get("data", data.get("info", []))
         return pd.DataFrame(rows)
 
