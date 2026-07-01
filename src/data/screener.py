@@ -90,19 +90,34 @@ def qualifies_low_priced(
     min_range_pct: float = 0.0,
     min_history_days: int = 60,
 ) -> bool:
-    """取得済みの日足から、低位・流動性・ボラの条件を満たすか判定."""
-    if df is None or df.empty or len(df) < min_history_days:
+    """取得済みの日足から、低位・流動性・ボラの条件を満たすか判定.
+
+    列欠損や欠測に対して堅牢(欠けていれば False を返し、例外を投げない)。
+    列名は大文字小文字の揺れも吸収する。
+    """
+    if df is None or getattr(df, "empty", True) or len(df) < min_history_days:
         return False
+    cols = {str(c).lower(): c for c in df.columns}
+    if "close" not in cols or "volume" not in cols:
+        return False
+
     recent = df.tail(20)
-    close = pd.to_numeric(recent.get("Close"), errors="coerce")
-    vol = pd.to_numeric(recent.get("Volume"), errors="coerce")
-    high = pd.to_numeric(recent.get("High"), errors="coerce")
-    low = pd.to_numeric(recent.get("Low"), errors="coerce")
-    if close.isna().all():
+    close = pd.to_numeric(recent[cols["close"]], errors="coerce")
+    vol = pd.to_numeric(recent[cols["volume"]], errors="coerce")
+    close_valid = close.dropna()
+    if close_valid.empty:
         return False
-    last_close = close.iloc[-1]
-    turnover = (close * vol).mean()
-    range_pct = ((high - low) / close).mean()
+
+    last_close = float(close_valid.iloc[-1])
+    turnover = float((close * vol).mean())
+
+    if "high" in cols and "low" in cols:
+        high = pd.to_numeric(recent[cols["high"]], errors="coerce")
+        low = pd.to_numeric(recent[cols["low"]], errors="coerce")
+        range_pct = float(((high - low) / close).mean())
+    else:
+        range_pct = float("nan")
+
     return bool(
         last_close > 0
         and last_close < max_price
