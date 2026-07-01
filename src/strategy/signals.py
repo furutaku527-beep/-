@@ -97,8 +97,13 @@ def generate_trades(
             continue
 
         entry = line                                    # 線で拾う想定
-        stop = line * (1 - p.stop_pct)
-        tp_price = entry * (1 + p.take_profit_pct) if p.take_profit_pct > 0 else None
+        # 決済水準(率 or 円)を算出
+        if p.exit_mode == "yen":
+            stop = entry - p.stop_yen if p.stop_yen > 0 else 0.0
+            tp_price = entry + p.take_profit_yen if p.take_profit_yen > 0 else None
+        else:
+            stop = line * (1 - p.stop_pct)
+            tp_price = entry * (1 + p.take_profit_pct) if p.take_profit_pct > 0 else None
 
         # --- 決済(当日内で完結)---
         hit_stop = cur["Low"] < stop

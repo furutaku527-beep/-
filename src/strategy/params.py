@@ -23,13 +23,20 @@ class StrategyParams:
     open_buf: float = 0.01    # 寄り付き許容バッファ
     require_open_above: bool = True   # 寄り付きが線付近以上であることを要求
 
-    # --- 損切り ---
-    stop_pct: float = 0.03    # 5日線割れ損切り幅(低位株はノイズが大きいので広め)
+    # --- 決済(利確/損切り)の単位 ---
+    # "pct" = 率(entry比%)/ "yen" = 円(1株あたりの値幅)。
+    # 本手法は「数百円の利確を積み重ねる」スキャルなので "yen" が本来忠実。
+    # ただし円建ては株価帯を絞った銘柄(min/max価格)でのみ意味を持つ。
+    exit_mode: str = "pct"
 
-    # --- 利確(take-profit)---
-    # >0 で有効。日中の高値が entry*(1+take_profit) に届いたらそこで利確(スキャル的)。
-    # 0 なら従来どおり引け決済まで持つ。
-    take_profit_pct: float = 0.0
+    # 率(pct)モード
+    stop_pct: float = 0.03           # 損切り幅(entry比)。低位株はノイズ大なので広め
+    take_profit_pct: float = 0.0     # 利確幅(entry比)。0で引けまで保有
+
+    # 円(yen)モード: 1株あたりの値幅
+    stop_yen: float = 0.0            # 損切り(entryから何円下)
+    take_profit_yen: float = 0.0     # 利確(entryから何円上)。0で引けまで保有
+
     # 同日にTPと損切りの両方に到達した場合の優先(日足では順序不明のため)。
     # "stop"=保守的に損切り優先 / "tp"=利確優先(楽観)。
     tp_stop_priority: str = "stop"

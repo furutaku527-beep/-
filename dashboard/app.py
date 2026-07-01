@@ -224,13 +224,29 @@ selected = st.sidebar.multiselect("対象銘柄", all_codes, default=all_codes)
 st.sidebar.subheader("戦略パラメータ")
 dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.0, 0.005,
                             help="0=押し目タッチで広くエントリー。上げると『大きな乖離からの押し目(激アツ)』に絞る")
-stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.08, 0.03, 0.005,
-                             help="低位株はノイズが大きいので広め推奨(狭いと刈られやすい)")
-take_profit = st.sidebar.slider("利確幅 take_profit(0=無効)", 0.0, 0.10, 0.0, 0.005,
-                                help=">0で日中高値が目標に届いたら利確(スキャル的)。0は引けまで保有")
+
+# 決済単位: 率(pct) or 円(yen)。本手法は円建てが本来忠実。
+exit_unit = st.sidebar.radio(
+    "利確/損切りの単位", ["％(率)", "円(1株あたり)"], index=0,
+    help="本手法は『数百円を積み重ねる』スキャル=円建てが本来。ただし円建ては株価帯を絞った銘柄で使うこと",
+)
+if exit_unit.startswith("円"):
+    exit_mode = "yen"
+    stop_yen = st.sidebar.number_input("損切り(円・entryから何円下)", 0.0, 1000.0, 5.0, 1.0)
+    tp_yen = st.sidebar.number_input("利確(円・entryから何円上, 0=無効)", 0.0, 1000.0, 3.0, 1.0)
+    stop_pct = 0.03; take_profit = 0.0
+    st.sidebar.caption("⚠️ 円建ては株価帯を絞った銘柄でのみ有効(下の価格フィルタ推奨)")
+else:
+    exit_mode = "pct"
+    stop_pct = st.sidebar.slider("損切り幅 stop_pct", 0.005, 0.08, 0.03, 0.005,
+                                 help="低位株はノイズが大きいので広め推奨(狭いと刈られやすい)")
+    take_profit = st.sidebar.slider("利確幅 take_profit(0=無効)", 0.0, 0.10, 0.0, 0.005,
+                                    help=">0で日中高値が目標に届いたら利確。0は引けまで保有")
+    stop_yen = 0.0; tp_yen = 0.0
+
 tp_priority = st.sidebar.selectbox(
     "同日にTP/損切り両到達時の優先", ["stop(保守)", "tp(楽観)"], index=0,
-    help="日足では日中の順序が不明なため。stop=保守的",
+    help="日足では日中の順序が不明なため。stop=保守的(下限)/ tp=楽観(上限)",
 )
 min_turnover_oku = st.sidebar.slider("最小売買代金(億円・銘柄フィルタ)", 0.0, 10.0, 0.5, 0.5)
 exclude_prime = st.sidebar.checkbox(
@@ -277,7 +293,8 @@ if not universe:
 params = StrategyParams(
     dev_min=dev_min, stop_pct=stop_pct, min_turnover=min_turnover_oku * 1e8,
     exclude_prime=exclude_prime, fee_rate=fee_rate, slippage_pct=slippage,
-    take_profit_pct=take_profit,
+    exit_mode=exit_mode, take_profit_pct=take_profit,
+    stop_yen=stop_yen, take_profit_yen=tp_yen,
     tp_stop_priority="tp" if tp_priority.startswith("tp") else "stop",
 )
 config = BacktestConfig(initial_capital=initial_capital, position_frac=position_frac)
