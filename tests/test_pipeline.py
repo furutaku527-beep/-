@@ -55,6 +55,44 @@ def test_costs_reduce_return():
     assert _apply_costs(0.02, p) < 0.02
 
 
+def test_v2_field_mapping_standardize():
+    """V2実データの短縮列名(O/H/L/C/Vo/AdjC…)を標準列へ正しくマップする回帰テスト."""
+    from src.data.jquants_client import JQuantsClient
+    rows = [{
+        "Date": "2024-07-11", "Code": "38250", "O": 100, "H": 110, "L": 95, "C": 105,
+        "UL": 130, "LL": 70, "Vo": 1_000_000, "Va": 105_000_000, "AdjFactor": 1.0,
+        "AdjO": 100, "AdjH": 110, "AdjL": 95, "AdjC": 105, "AdjVo": 1_000_000,
+    }]
+    std = JQuantsClient._standardize(rows)
+    for col in ["Open", "High", "Low", "Close", "Volume", "AdjustmentClose"]:
+        assert col in std.columns, f"{col} が標準化されていない"
+    assert float(std["Close"].iloc[0]) == 105
+
+
+def test_v2_mapped_data_generates_trades():
+    """V2列名の生データからトレードが生成される(0件バグの回帰防止)."""
+    import numpy as np
+    from src.data.jquants_client import JQuantsClient
+    rng = np.random.default_rng(1)
+    n = 300
+    dates = pd.bdate_range("2024-01-01", periods=n)
+    close = 300 * np.exp(np.cumsum(rng.normal(0.0005, 0.03, n)))
+    rows = []
+    for i in range(n):
+        c = close[i]
+        hi = c * (1 + abs(rng.normal(0, 0.03)))
+        lo = c * (1 - abs(rng.normal(0, 0.03)))
+        o = lo + rng.random() * (hi - lo)
+        rows.append({
+            "Date": dates[i].strftime("%Y-%m-%d"), "Code": "38250",
+            "O": o, "H": max(hi, o, c), "L": min(lo, o, c), "C": c,
+            "Vo": int(rng.integers(1e6, 5e6)),
+        })
+    std = JQuantsClient._standardize(rows)
+    trades = generate_trades(std, StrategyParams(), apply_screening=False)
+    assert len(trades) > 0, "V2データからトレードが1件も出ていない(マッピング不良の疑い)"
+
+
 def test_screener_filters_low_priced_and_prime():
     """低位株スクリーナー: 高価格/低流動性/プライムを除外する."""
     from src.data.screener import screen_low_priced

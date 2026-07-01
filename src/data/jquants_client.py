@@ -30,15 +30,21 @@ import requests
 
 BASE_URL = "https://api.jquants.com/v2"
 
-# V2 レスポンス(小文字)→ 本システム標準列(従来の PascalCase)への対応
+# V2 レスポンスの実際の列名 → 本システム標準列(PascalCase)への対応
+# 実データの列: Date, Code, O, H, L, C, UL, LL, Vo, Va, AdjFactor,
+#              AdjO, AdjH, AdjL, AdjC, AdjVo  (O=Open, C=Close, Vo=Volume, Va=売買代金)
+# Adj* は分割調整済み。normalize_ohlcv が Adjustment* を優先して使う。
 _FIELD_MAP = {
-    "date": "Date",
-    "code": "Code",
-    "open": "Open",
-    "high": "High",
-    "low": "Low",
-    "close": "Close",
-    "volume": "Volume",
+    "Date": "Date", "Code": "Code",
+    "O": "Open", "H": "High", "L": "Low", "C": "Close",
+    "Vo": "Volume", "Va": "Turnover",
+    "UL": "UpperLimit", "LL": "LowerLimit",
+    "AdjFactor": "AdjustmentFactor",
+    "AdjO": "AdjustmentOpen", "AdjH": "AdjustmentHigh", "AdjL": "AdjustmentLow",
+    "AdjC": "AdjustmentClose", "AdjVo": "AdjustmentVolume",
+    # 旧仕様/小文字の可能性にも一応対応(将来の仕様変更ヘッジ)
+    "date": "Date", "code": "Code",
+    "open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume",
 }
 
 
