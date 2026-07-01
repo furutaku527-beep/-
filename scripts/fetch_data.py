@@ -26,10 +26,20 @@ from src.data.config import load_env  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description="J-Quants 日足データ取得")
     parser.add_argument("--codes", nargs="+", default=[], help="銘柄コード(複数可)")
+    parser.add_argument("--codes-file", default=None,
+                        help="銘柄コードを1行1個 or カンマ区切りで書いたファイル")
     parser.add_argument("--from", dest="from_date", default=None, help="取得開始日 YYYY-MM-DD")
     parser.add_argument("--to", dest="to_date", default=None, help="取得終了日 YYYY-MM-DD")
-    parser.add_argument("--check", action="store_true", help="接続テスト(7203を直近30日)")
+    parser.add_argument("--sleep", type=float, default=1.5,
+                        help="銘柄ごとの取得間隔秒(レート制限対策。既定1.5)")
+    parser.add_argument("--check", action="store_true", help="接続テスト(7203を直近90日)")
     args = parser.parse_args()
+
+    # --codes-file があればコードを読み込んで統合
+    if args.codes_file:
+        with open(args.codes_file, encoding="utf-8") as fh:
+            text = fh.read().replace(",", " ").replace("\n", " ")
+        args.codes = list(dict.fromkeys(args.codes + text.split()))
 
     load_env()
 
@@ -45,18 +55,23 @@ def main() -> int:
     if not args.codes or not args.from_date or not args.to_date:
         parser.error("--codes / --from / --to を指定してください(または --check)")
 
+    import time
     rc = 0
-    for code in args.codes:
+    n = len(args.codes)
+    for i, code in enumerate(args.codes, start=1):
         try:
             df = client.get_daily_quotes(code, args.from_date, args.to_date)
             if df.empty:
-                print(f"  {code}: データ0件(期間や権限を確認してください)")
-                continue
-            save_daily(code, df)
-            print(f"  {code}: {len(df)} 件保存 ({df['Date'].min().date()} 〜 {df['Date'].max().date()})")
+                print(f"  [{i}/{n}] {code}: データ0件(期間や権限を確認してください)")
+            else:
+                save_daily(code, df)
+                print(f"  [{i}/{n}] {code}: {len(df)} 件保存 "
+                      f"({df['Date'].min().date()} 〜 {df['Date'].max().date()})")
         except JQuantsError as exc:
-            print(f"  {code}: 取得失敗 - {exc}", file=sys.stderr)
+            print(f"  [{i}/{n}] {code}: 取得失敗 - {exc}", file=sys.stderr)
             rc = 1
+        if i < n and args.sleep > 0:
+            time.sleep(args.sleep)  # レート制限対策
     return rc
 
 
