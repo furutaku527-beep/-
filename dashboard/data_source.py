@@ -65,7 +65,7 @@ def _fetch_one_cached(code: str, from_date: str, to_date: str) -> pd.DataFrame:
     無料プランはレート制限が厳しいため、実ネットワーク取得時(=キャッシュミス時)
     のみ短いウェイトを入れて連続アクセスを緩和する。
     """
-    time.sleep(0.8)  # レート制限対策(キャッシュヒット時は実行されない)
+    time.sleep(1.5)  # レート制限対策(キャッシュヒット時は実行されない)
     return JQuantsClient.from_env().get_daily_quotes(code, from_date, to_date)
 
 
