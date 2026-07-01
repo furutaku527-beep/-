@@ -185,16 +185,27 @@ elif source == "J-Quantsから取得(銘柄指定)":
             "(2026年6月にメール/パスワード方式は廃止されAPIキー方式になりました)"
         )
         st.sidebar.caption("(設定済みなら再読み込みしてください)")
-    codes_text = st.sidebar.text_input(
-        "銘柄コード(カンマ区切り)", "7203,6758,9984",
-        help="例: 7203,6758,9984",
+    # 低位・高ボラの小型株を初期値にセット(ボタン1回で試せるように)
+    default_codes = "3825,4591,2158,6172,3672,4777,2743,3810,3990,2484,3667,6047"
+    codes_text = st.sidebar.text_area(
+        "銘柄コード(カンマ区切り)", default_codes, height=80,
+        help="低位株の例を初期設定済み。自由に差し替え可",
     )
     frm = st.sidebar.date_input("取得開始日", _def_from)
     to = st.sidebar.date_input("取得終了日", _def_to)
     st.sidebar.caption("※無料プランは約12週間遅延・直近約2年。範囲外は自動調整します。")
     if st.sidebar.button("📥 データ取得 / 更新", disabled=not has_creds):
         codes = tuple(c.strip() for c in codes_text.split(",") if c.strip())
-        live_universe = fetch_live(codes, str(frm), str(to))
+        prog = st.sidebar.progress(0.0, text="取得開始...")
+        status = st.sidebar.empty()
+
+        def _cb(done, total, ok, code):
+            prog.progress(min(done / max(total, 1), 1.0), text=f"取得 {done}/{total}")
+            status.info(f"📥 取得 {done}/{total} ・ 成功 {ok} ・ 現在 {code}")
+
+        live_universe = fetch_live(codes, str(frm), str(to), progress_cb=_cb)
+        prog.progress(1.0, text="完了")
+        status.success(f"✅ 完了: {len(live_universe)}銘柄を取得しました")
         st.session_state["live_universe"] = live_universe
     live_universe = st.session_state.get("live_universe")
     if "_fetch_errors" in st.session_state:

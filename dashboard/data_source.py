@@ -126,18 +126,22 @@ def screen_and_fetch(
     return universe
 
 
-@st.cache_data(show_spinner="J-Quants からデータ取得中...", ttl=3600)
-def fetch_live(codes: tuple[str, ...], from_date: str, to_date: str) -> dict:
-    """J-Quants から日足を取得して {code: DataFrame} を返す(キャッシュ付き).
+def fetch_live(
+    codes: tuple[str, ...], from_date: str, to_date: str, progress_cb=None,
+) -> dict:
+    """指定銘柄の日足を取得して {code: DataFrame} を返す(進捗コールバック対応).
 
-    認証は resolve_credentials() で事前に通しておくこと。
+    個別取得はキャッシュ(_fetch_one_cached)されるので再実行は高速。
+    progress_cb(done, total, ok, code) が渡されれば都度呼ぶ。
     """
-    client = JQuantsClient.from_env()
     universe: dict[str, pd.DataFrame] = {}
     errors: list[str] = []
-    for c in codes:
+    total = len(codes)
+    for i, c in enumerate(codes, start=1):
+        if progress_cb is not None:
+            progress_cb(i, total, len(universe), c)
         try:
-            df = client.get_daily_quotes(c, from_date, to_date)
+            df = _fetch_one_cached(c, from_date, to_date)
             if not df.empty:
                 universe[c] = df
             else:
@@ -145,7 +149,6 @@ def fetch_live(codes: tuple[str, ...], from_date: str, to_date: str) -> dict:
         except Exception as exc:  # noqa: BLE001 - UIに表示するため握る
             errors.append(f"{c}: {exc}")
     if errors:
-        # キャッシュ対象の戻り値に混ぜず、セッションに残す
         st.session_state["_fetch_errors"] = errors
     else:
         st.session_state.pop("_fetch_errors", None)
