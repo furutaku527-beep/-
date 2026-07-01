@@ -84,7 +84,10 @@ def generate_trades(
         # --- セットアップ条件(前日までで確定)---
         rising = prev["MA_fast"] > prev2["MA_fast"]    # 前日時点で5日線が上向き
         above_line = prev["Close"] > prev["MA_fast"]   # 前日は線の上
-        deviated = prev["dev_fast"] >= p.dev_min        # 前日終値が線から乖離
+        # 乖離が下限以上、かつ(上限が有効なら)上限以下。乖離しすぎ=落ちるナイフを除外
+        deviated = prev["dev_fast"] >= p.dev_min and (
+            p.dev_max <= 0 or prev["dev_fast"] <= p.dev_max
+        )
         if not (rising and above_line and deviated):
             continue
 
@@ -179,7 +182,9 @@ def diagnose_trades(raw_df: pd.DataFrame, params: StrategyParams | None = None) 
             above += 1
         else:
             continue
-        if prev["dev_fast"] >= p.dev_min:
+        if prev["dev_fast"] >= p.dev_min and (
+            p.dev_max <= 0 or prev["dev_fast"] <= p.dev_max
+        ):
             deviated += 1
         else:
             continue

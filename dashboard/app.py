@@ -224,6 +224,8 @@ selected = st.sidebar.multiselect("対象銘柄", all_codes, default=all_codes)
 st.sidebar.subheader("戦略パラメータ")
 dev_min = st.sidebar.slider("最小乖離 dev_min", 0.0, 0.10, 0.0, 0.005,
                             help="0=押し目タッチで広くエントリー。上げると『大きな乖離からの押し目(激アツ)』に絞る")
+dev_max = st.sidebar.slider("最大乖離 dev_max(0=上限なし)", 0.0, 0.15, 0.0, 0.005,
+                            help="乖離しすぎ(落ちるナイフ)を除外。実データでは~5%超で成績悪化。0.05前後を推奨")
 
 # 決済単位: 率(pct) or 円(yen)。本手法は円建てが本来忠実。
 exit_unit = st.sidebar.radio(
@@ -291,7 +293,7 @@ if not universe:
     st.stop()
 
 params = StrategyParams(
-    dev_min=dev_min, stop_pct=stop_pct, min_turnover=min_turnover_oku * 1e8,
+    dev_min=dev_min, dev_max=dev_max, stop_pct=stop_pct, min_turnover=min_turnover_oku * 1e8,
     exclude_prime=exclude_prime, fee_rate=fee_rate, slippage_pct=slippage,
     exit_mode=exit_mode, take_profit_pct=take_profit,
     stop_yen=stop_yen, take_profit_yen=tp_yen,
