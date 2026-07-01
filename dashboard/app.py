@@ -399,6 +399,61 @@ with tab_trades:
         csv = trades.to_csv(index=False).encode("utf-8-sig")
         st.download_button("トレード明細をCSVダウンロード", csv, "trades.csv", "text/csv")
 
+# ----------------------------------------------------------------------- #
+# エッジ分析(優位性の有無を詰める)
+# ----------------------------------------------------------------------- #
+if metrics["n_trades"] > 0:
+    from src.report import per_trade_expectancy, deviation_buckets, buy_and_hold_return
+    from src.backtest import run_backtest as _rb
+    from src.report import compute_metrics as _cm
+
+    with st.expander("🔬 エッジ分析(優位性が本物か詰める)", expanded=True):
+        # 1) 期待値と t 値
+        ex = per_trade_expectancy(trades)
+        if ex:
+            verdict = "✅ 統計的に有意(ノイズでない)" if ex["significant"] else \
+                      "⚠️ 有意でない(ノイズの範囲かも)"
+            st.markdown(
+                f"**① 1トレード期待値(正味)**: {ex['mean_ret_net']*100:+.3f}% "
+                f"／ t値 = {ex['t_stat']:.2f} → {verdict}"
+            )
+            st.caption("|t|≧2 が目安。トレード数が少ないと有意になりにくい。")
+
+        # 2) Buy&Hold との比較
+        bh = buy_and_hold_return(universe)
+        if bh is not None:
+            beat = "上回る(妙味あり)" if metrics["return_pct"] > bh else "下回る(ただ保有した方が良い)"
+            st.markdown(
+                f"**② 単純保有との比較**: 戦略 {metrics['return_pct']*100:+.1f}% vs "
+                f"対象銘柄を保有 {bh*100:+.1f}% → 戦略が{beat}"
+            )
+            st.caption("戦略が単純保有に負けるなら、リスクを取る意味が薄い。")
+
+        # 3) 乖離別の成績(手法の核心主張の検証)
+        st.markdown("**③ 乖離(dev)別の成績 — 『乖離が大きいほど良い』の検証**")
+        db = deviation_buckets(trades)
+        if not db.empty:
+            st.dataframe(db, width='stretch', hide_index=True)
+            st.caption("乖離帯が大きいほど勝率/平均リターンが上がれば、手法の主張を支持。")
+        else:
+            st.caption("トレード数が少なく集計できません。")
+
+        # 4) 保守 vs 楽観(決済仮定の下限〜上限)
+        st.markdown("**④ 決済仮定の下限〜上限(保守 vs 楽観)**")
+        base = params.to_dict()
+        m_cons = _cm(_rb(universe, StrategyParams.from_dict({**base, "tp_stop_priority": "stop"}),
+                         config, apply_screening=apply_screening))
+        m_opt = _cm(_rb(universe, StrategyParams.from_dict({**base, "tp_stop_priority": "tp"}),
+                        config, apply_screening=apply_screening))
+        cc, co = st.columns(2)
+        cc.metric("保守(stop優先)", f"PF {m_cons['profit_factor']:.2f}",
+                  f"{m_cons['return_pct']*100:+.1f}%")
+        co.metric("楽観(tp優先)", f"PF {m_opt['profit_factor']:.2f}",
+                  f"{m_opt['return_pct']*100:+.1f}%")
+        st.caption("真の実力は両者の間。保守側でもPF>1・プラスなら優位性は堅い。"
+                   "保守で負けるなら、優位性は楽観的仮定に依存している。")
+
+
 with st.expander("ℹ️ 手法と検証範囲について"):
     st.markdown(
         "- 本検証は **5日線への押し目タッチ・リバウンド(ロング・デイトレ)** を"

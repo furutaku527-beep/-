@@ -3,5 +3,9 @@
 from .metrics import compute_metrics, format_metrics
 from .plots import plot_equity_curve
 from .html_report import build_html_report
+from .edge import per_trade_expectancy, deviation_buckets, buy_and_hold_return
 
-__all__ = ["compute_metrics", "format_metrics", "plot_equity_curve", "build_html_report"]
+__all__ = [
+    "compute_metrics", "format_metrics", "plot_equity_curve", "build_html_report",
+    "per_trade_expectancy", "deviation_buckets", "buy_and_hold_return",
+]
