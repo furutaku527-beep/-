@@ -278,6 +278,18 @@ metrics = compute_metrics(result)
 trades = result["trades"]
 equity = result["equity"]
 
+# トレード0件なのにデータがある場合、原因を段階別に診断表示
+if metrics["n_trades"] == 0 and universe:
+    from src.strategy import diagnose_trades
+    with st.expander("🔧 トレード0件の診断(銘柄ごとの段階別件数)", expanded=True):
+        st.caption(
+            "raw_columns=取得した生の列名 / normalized_rows=価格正規化後の行数 / "
+            "screening_pass=銘柄フィルタ通過 / stage_*=各条件を満たした日数。"
+        )
+        for code, df in list(universe.items())[:6]:
+            st.markdown(f"**{code}**")
+            st.json(diagnose_trades(df, params))
+
 
 # ----------------------------------------------------------------------- #
 # 表示(スマホ向け: タブで縦スクロールを最小化)

@@ -128,6 +128,61 @@ def generate_trades(
     return pd.DataFrame(rows)
 
 
+def diagnose_trades(raw_df: pd.DataFrame, params: StrategyParams | None = None) -> dict:
+    """1銘柄について、なぜトレードが出ない/出るのかを段階別に可視化する.
+
+    生データの列 → 正規化後の行数 → スクリーニング → 各シグナル段階の件数を返す。
+    トレード0件の原因切り分けに使う。
+    """
+    p = params or StrategyParams()
+    info: dict = {
+        "raw_rows": int(len(raw_df)),
+        "raw_columns": [str(c) for c in raw_df.columns],
+    }
+    norm = normalize_ohlcv(raw_df)
+    info["normalized_rows"] = int(len(norm))
+    if norm.empty:
+        info["note"] = "正規化後0行= Close列が欠損/全NaN(列名マッピングの問題)"
+        return info
+    try:
+        info["last_close"] = float(norm["Close"].iloc[-1])
+    except Exception:
+        info["last_close"] = None
+    info["screening_pass"] = bool(passes_screening(norm, p))
+
+    df = add_indicators(norm, p)
+    rising = above = deviated = touched = opened = 0
+    for i in range(2, len(df)):
+        prev2, prev, cur = df.iloc[i - 2], df.iloc[i - 1], df.iloc[i]
+        line = prev["MA_fast"]
+        if pd.isna(line) or pd.isna(prev2["MA_fast"]):
+            continue
+        if prev["MA_fast"] > prev2["MA_fast"]:
+            rising += 1
+        else:
+            continue
+        if prev["Close"] > prev["MA_fast"]:
+            above += 1
+        else:
+            continue
+        if prev["dev_fast"] >= p.dev_min:
+            deviated += 1
+        else:
+            continue
+        if cur["Low"] <= line:
+            touched += 1
+        else:
+            continue
+        if not (p.require_open_above and cur["Open"] < line * (1 - p.open_buf)):
+            opened += 1
+    info["stage_rising"] = rising
+    info["stage_above_line"] = above
+    info["stage_deviated"] = deviated
+    info["stage_touched"] = touched
+    info["stage_entry(after_open_filter)"] = opened
+    return info
+
+
 def _empty_trades() -> pd.DataFrame:
     return pd.DataFrame(
         columns=[

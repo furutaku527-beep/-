@@ -2,7 +2,7 @@
 
 from .params import StrategyParams
 from .indicators import normalize_ohlcv, add_indicators
-from .signals import generate_trades, passes_screening
+from .signals import generate_trades, passes_screening, diagnose_trades
 
 __all__ = [
     "StrategyParams",
@@ -10,4 +10,5 @@ __all__ = [
     "add_indicators",
     "generate_trades",
     "passes_screening",
+    "diagnose_trades",
 ]
