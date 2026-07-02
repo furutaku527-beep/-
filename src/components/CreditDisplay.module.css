@@ -1,0 +1,61 @@
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.box {
+  background: #0a0920;
+  border: 1px solid #4a4494;
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 84px;
+  text-align: center;
+}
+
+.label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.msg {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  animation: blink 0.6s step-end infinite;
+}
+
+.big {
+  color: var(--big);
+}
+
+.reg {
+  color: var(--reg);
+}
+
+.diff {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.55;
+  }
+}

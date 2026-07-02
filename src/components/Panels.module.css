@@ -1,0 +1,204 @@
+.panel {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.counterRow {
+  display: flex;
+  gap: 8px;
+}
+
+.counterBox {
+  flex: 1;
+  background: #0a0920;
+  border: 1px solid #4a4494;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+}
+
+.counterLabel {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.counterValue {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bigColor {
+  color: var(--big);
+}
+
+.regColor {
+  color: var(--reg);
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--panel-light);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.badgeBig {
+  background: var(--big);
+  color: #fff;
+}
+
+.badgeReg {
+  background: var(--reg);
+  color: #06283d;
+}
+
+.statTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.statTable th,
+.statTable td {
+  padding: 6px 4px;
+  text-align: right;
+  border-bottom: 1px solid #35316a;
+}
+
+.statTable th:first-child,
+.statTable td:first-child {
+  text-align: left;
+}
+
+.statTable th {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.achGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.achItem {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--panel-light);
+  border-radius: 8px;
+}
+
+.achLocked {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.achIcon {
+  font-size: 22px;
+}
+
+.achTitle {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.achDesc {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.debugRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.settingBtn {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel-light);
+  border: 1px solid #4a4494;
+  border-radius: 8px;
+}
+
+.settingActive {
+  background: var(--accent);
+  color: #4a2c00;
+  border-color: var(--accent);
+}
+
+.debugBtn {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel-light);
+  border: 1px solid #4a4494;
+  border-radius: 8px;
+}
+
+.dangerBtn {
+  background: #5c1a22;
+  border-color: #a02830;
+}
+
+.simResult {
+  font-size: 12px;
+  line-height: 1.8;
+  background: #0a0920;
+  border-radius: 8px;
+  padding: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.graphWrap {
+  background: #0a0920;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}

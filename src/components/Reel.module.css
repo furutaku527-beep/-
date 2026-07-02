@@ -1,0 +1,34 @@
+.window {
+  position: relative;
+  width: 72px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0a0920 0%, #23214a 20%, #23214a 80%, #0a0920 100%);
+  border: 2px solid #4a4494;
+  border-radius: 8px;
+}
+
+.strip {
+  will-change: transform;
+}
+
+.spinning {
+  filter: blur(1.5px);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.payline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 0;
+  border-top: 1px dashed rgba(255, 210, 63, 0.35);
+  pointer-events: none;
+}

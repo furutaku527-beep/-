@@ -1,0 +1,124 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  min-height: 100dvh;
+}
+
+.bonusMode {
+  animation: bonusGlow 1.2s ease-in-out infinite;
+}
+
+@keyframes bonusGlow {
+  0%,
+  100% {
+    background: radial-gradient(ellipse at top, rgba(255, 210, 63, 0.08), transparent 60%);
+  }
+  50% {
+    background: radial-gradient(ellipse at top, rgba(255, 93, 143, 0.14), transparent 60%);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ffd23f, #ff5d8f, #4fc3f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: 1px;
+}
+
+.machine {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--panel-light);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.tabBar {
+  display: flex;
+  gap: 6px;
+}
+
+.tab,
+.tabActive {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  color: var(--text-dim);
+  background: var(--panel);
+}
+
+.tabActive {
+  color: #4a2c00;
+  background: var(--accent);
+}
+
+.panelArea {
+  min-height: 200px;
+}
+
+.toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #2a2657, #1e1b3f);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 16px;
+  z-index: 100;
+  box-shadow: 0 4px 24px rgba(255, 210, 63, 0.35);
+  animation: toastIn 0.3s ease-out;
+  max-width: 90vw;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.toastIcon {
+  font-size: 26px;
+}
+
+.toastTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.toastDesc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.footer {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  padding-bottom: 12px;
+}
