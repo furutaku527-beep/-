@@ -20,7 +20,12 @@
 html,
 body {
   height: 100%;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -5%, rgba(120, 90, 255, 0.16), transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 105%, rgba(255, 93, 143, 0.1), transparent 60%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.014) 0 2px, transparent 2px 26px),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;

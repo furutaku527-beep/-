@@ -7,6 +7,7 @@ import { DebugMenu } from './components/DebugMenu'
 import { NotifyLamp } from './components/NotifyLamp'
 import { ReelSet } from './components/ReelSet'
 import { StatsPanel } from './components/StatsPanel'
+import { SymbolDefs } from './components/symbols'
 import { useAchievementsStore } from './state/achievementsStore'
 import { useGameStore } from './state/gameStore'
 import styles from './App.module.css'
@@ -29,14 +30,27 @@ export default function App() {
 
   return (
     <div className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}>
+      <SymbolDefs />
       <header className={styles.header}>
         <h1 className={styles.title} onClick={() => setTitleTaps((n) => n + 1)}>
           ピカピカスロット
         </h1>
-        <NotifyLamp />
       </header>
 
       <main className={styles.machine}>
+        <div className={styles.marquee}>
+          <div className={styles.decoLights}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={styles.decoDot} style={{ animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
+          <NotifyLamp />
+          <div className={styles.decoLights}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={styles.decoDot} style={{ animationDelay: `${i * 0.2 + 0.1}s` }} />
+            ))}
+          </div>
+        </div>
         <CreditDisplay />
         <ReelSet />
         <Controls />

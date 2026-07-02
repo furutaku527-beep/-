@@ -53,7 +53,7 @@ export function Controls() {
           {replayNext ? 'REPLAY' : 'START'}
         </button>
         <button className={styles.sideBtn} onClick={toggleMute}>
-          {muted ? '🔇' : '🔊'}
+          {muted ? '♪ OFF' : '♪ ON'}
         </button>
       </div>
       {broke && (

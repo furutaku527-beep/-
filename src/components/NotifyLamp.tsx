@@ -13,8 +13,11 @@ export function NotifyLamp() {
         ? `${styles.lamp} ${styles.on}`
         : styles.lamp
 
+  const lit = lamp !== 'off' || inBonus !== null
+
   return (
     <div className={styles.wrap}>
+      {lit && <div className={styles.rays} />}
       <div className={cls}>
         <span className={styles.face}>✦</span>
       </div>

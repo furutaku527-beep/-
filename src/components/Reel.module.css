@@ -1,10 +1,21 @@
 .window {
   position: relative;
-  width: 72px;
+  width: 82px;
   overflow: hidden;
-  background: linear-gradient(180deg, #0a0920 0%, #23214a 20%, #23214a 80%, #0a0920 100%);
-  border: 2px solid #4a4494;
-  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    #1c1c22 0%,
+    #f2f0ec 18%,
+    #fffdf8 45%,
+    #fffdf8 55%,
+    #eceae4 82%,
+    #1c1c22 100%
+  );
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.55),
+    inset 0 10px 14px rgba(0, 0, 0, 0.5),
+    inset 0 -10px 14px rgba(0, 0, 0, 0.5);
 }
 
 .strip {
@@ -12,14 +23,13 @@
 }
 
 .spinning {
-  filter: blur(1.5px);
+  filter: blur(2px);
 }
 
 .cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
   line-height: 1;
 }
 
@@ -29,6 +39,23 @@
   right: 0;
   top: 50%;
   height: 0;
-  border-top: 1px dashed rgba(255, 210, 63, 0.35);
+  border-top: 1.5px solid rgba(255, 60, 60, 0.22);
   pointer-events: none;
+}
+
+/* ガラスの映り込み */
+.glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.18) 38%,
+      rgba(255, 255, 255, 0.05) 46%,
+      transparent 54%
+    ),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.35) 100%);
+  border-radius: 6px;
 }

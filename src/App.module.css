@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 14px;
+  padding: 12px;
   min-height: 100dvh;
 }
 
@@ -13,38 +13,103 @@
 @keyframes bonusGlow {
   0%,
   100% {
-    background: radial-gradient(ellipse at top, rgba(255, 210, 63, 0.08), transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(255, 210, 63, 0.1), transparent 60%);
   }
   50% {
-    background: radial-gradient(ellipse at top, rgba(255, 93, 143, 0.14), transparent 60%);
+    background: radial-gradient(ellipse at top, rgba(255, 93, 143, 0.16), transparent 60%);
   }
 }
 
 .header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
+  padding-top: 4px;
 }
 
+/* ネオンサイン風タイトル */
 .title {
-  font-size: 22px;
-  font-weight: 800;
-  background: linear-gradient(90deg, #ffd23f, #ff5d8f, #4fc3f7);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  letter-spacing: 1px;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #ffe9f4;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 10px #ff5d8f,
+    0 0 22px #ff5d8f,
+    0 0 40px #d81b60;
+  animation: neonFlicker 4.5s linear infinite;
 }
 
+@keyframes neonFlicker {
+  0%,
+  86%,
+  90%,
+  94%,
+  100% {
+    opacity: 1;
+  }
+  88%,
+  92% {
+    opacity: 0.55;
+  }
+}
+
+/* 筐体：メタリックフレーム */
 .machine {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  background: var(--panel-light);
-  border-radius: 18px;
+  gap: 13px;
+  border-radius: 22px;
   padding: 14px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(180deg, #35315e 0%, #262347 55%, #1b1837 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 0 4px #14121f,
+    0 0 0 6px #5c5870,
+    0 0 0 7px #14121f,
+    0 14px 34px rgba(0, 0, 0, 0.65),
+    inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+
+/* ランプを載せる上部パネル */
+.marquee {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px 6px 6px;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(255, 210, 63, 0.12), transparent 60%),
+    linear-gradient(180deg, #1c1936, #262347);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.decoLights {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.decoDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd9e6, #ff5d8f 65%, #b3123f);
+  box-shadow: 0 0 8px 1px rgba(255, 93, 143, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+  animation: dotBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes dotBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .tabBar {
@@ -61,11 +126,13 @@
   border-radius: 10px;
   color: var(--text-dim);
   background: var(--panel);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .tabActive {
   color: #4a2c00;
-  background: var(--accent);
+  background: linear-gradient(180deg, #ffe27a, var(--accent));
+  box-shadow: 0 0 14px rgba(255, 210, 63, 0.35);
 }
 
 .panelArea {

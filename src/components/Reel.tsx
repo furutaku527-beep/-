@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { STRIP_LENGTH, SYMBOL_ICONS, symbolAt } from '../game/reels'
+import { STRIP_LENGTH, symbolAt } from '../game/reels'
 import { KOMA_MS, useGameStore } from '../state/gameStore'
+import { SlotSymbol } from './symbols'
 import styles from './Reel.module.css'
 
 const ITEM_H = 64 // px
@@ -46,11 +47,12 @@ export function Reel({ reel }: Props) {
       >
         {items.map(({ key, symbol }) => (
           <div key={key} className={styles.cell} style={{ height: ITEM_H }}>
-            {SYMBOL_ICONS[symbol]}
+            <SlotSymbol symbol={symbol} />
           </div>
         ))}
       </div>
       <div className={styles.payline} />
+      <div className={styles.glass} />
     </div>
   )
 }
