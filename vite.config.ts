@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: './',
+  // ローカル/Vercelは相対パス、GitHub PagesビルドはBASE_PATH（例: /-/）を使う
+  base: process.env.BASE_PATH || './',
   plugins: [
     react(),
     VitePWA({
