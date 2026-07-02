@@ -7,9 +7,11 @@ import { DebugMenu } from './components/DebugMenu'
 import { NotifyLamp } from './components/NotifyLamp'
 import { ReelSet } from './components/ReelSet'
 import { StatsPanel } from './components/StatsPanel'
-import { SymbolDefs } from './components/symbols'
 import { useAchievementsStore } from './state/achievementsStore'
 import { useGameStore } from './state/gameStore'
+import bgUrl from './assets/bg.webp'
+import bonusUrl from './assets/bonus.webp'
+import marqueeUrl from './assets/marquee.webp'
 import styles from './App.module.css'
 
 type Tab = 'data' | 'stats' | 'ach' | 'debug'
@@ -28,9 +30,15 @@ export default function App() {
     return () => clearTimeout(t)
   }, [lastUnlocked, clearToast])
 
+  const appBg = inBonus
+    ? `linear-gradient(180deg, rgba(20, 8, 40, 0.5), rgba(10, 6, 26, 0.72)), url(${bonusUrl})`
+    : `linear-gradient(180deg, rgba(10, 8, 24, 0.22), rgba(10, 8, 24, 0.55)), url(${bgUrl})`
+
   return (
-    <div className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}>
-      <SymbolDefs />
+    <div
+      className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}
+      style={{ backgroundImage: appBg }}
+    >
       <header className={styles.header}>
         <h1 className={styles.title} onClick={() => setTitleTaps((n) => n + 1)}>
           ピカピカスロット
@@ -38,7 +46,12 @@ export default function App() {
       </header>
 
       <main className={styles.machine}>
-        <div className={styles.marquee}>
+        <div
+          className={styles.marquee}
+          style={{
+            backgroundImage: `radial-gradient(circle at 50% 45%, rgba(10, 8, 20, 0.42), rgba(10, 8, 20, 0.12) 70%), url(${marqueeUrl})`,
+          }}
+        >
           <div className={styles.decoLights}>
             {[0, 1, 2, 3].map((i) => (
               <span key={i} className={styles.decoDot} style={{ animationDelay: `${i * 0.2}s` }} />
