@@ -42,9 +42,6 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          # リポジトリのPagesを自動で有効化（GitHub Actionsをソースに設定）
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
