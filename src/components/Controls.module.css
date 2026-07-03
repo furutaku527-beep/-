@@ -1,0 +1,159 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stopRow {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+}
+
+/* 実機風の丸ボタン（クロームリング＋発光ドーム） */
+.stopBtn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  background: radial-gradient(circle at 35% 28%, #ff9d9d, #e03540 55%, #8e1018 100%);
+  box-shadow:
+    0 0 0 4px #3a3745,
+    0 0 0 6px #b9b9c8,
+    0 5px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.35),
+    inset 0 3px 5px rgba(255, 255, 255, 0.45),
+    0 0 16px 2px rgba(255, 60, 70, 0.5);
+  transition: transform 0.06s, box-shadow 0.15s;
+}
+
+.stopBtn:active:not(:disabled) {
+  transform: translateY(2px) scale(0.97);
+}
+
+.stopBtn:disabled {
+  background: radial-gradient(circle at 35% 28%, #55525e, #38353f 60%, #232028 100%);
+  color: #77737f;
+  text-shadow: none;
+  box-shadow:
+    0 0 0 4px #3a3745,
+    0 0 0 6px #6d6a78,
+    0 5px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.35);
+}
+
+.mainRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* レバー相当のスタートボタン */
+.startBtn {
+  flex: 1;
+  max-width: 230px;
+  padding: 17px 0;
+  position: relative;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #4a2500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, #fff0a8 0%, #ffd23f 45%, #f59f00 55%, #d97c00 100%);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 5px #cfa93c,
+    0 6px 0 #8a5c00,
+    0 10px 16px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.8),
+    0 0 22px 2px rgba(255, 200, 60, 0.45);
+  overflow: hidden;
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+
+.startBtn::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 4px;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.startBtn:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 5px #cfa93c,
+    0 2px 0 #8a5c00,
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.8);
+}
+
+.startBtn:disabled {
+  background: linear-gradient(180deg, #55525e, #38353f);
+  color: #77737f;
+  text-shadow: none;
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 5px #6d6a78,
+    0 6px 0 #232028,
+    0 10px 16px rgba(0, 0, 0, 0.4);
+}
+
+.startBtn:disabled::after {
+  opacity: 0.15;
+}
+
+.sideBtn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: #cfcbe0;
+  background: radial-gradient(circle at 35% 28%, #4c4860, #2d2a3d 60%, #1c1926 100%);
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 5px #8b8899,
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.25);
+  transition: transform 0.06s;
+}
+
+.sideBtn:active {
+  transform: translateY(2px) scale(0.97);
+}
+
+.sideActive {
+  color: #4a2500;
+  background: radial-gradient(circle at 35% 28%, #fff0a8, #ffc93c 60%, #e08a00 100%);
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 5px #cfa93c,
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.6),
+    0 0 18px 3px rgba(255, 200, 60, 0.55);
+}
+
+.refill {
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(180deg, #43c97a, #1f8a4e 55%, #14663a);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 0 #0c4526,
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.4);
+}

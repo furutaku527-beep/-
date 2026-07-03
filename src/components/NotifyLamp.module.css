@@ -1,0 +1,154 @@
+.wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 点灯時に背後で回転する光条 */
+.rays {
+  position: absolute;
+  top: -14px;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    rgba(255, 210, 63, 0.5) 0deg 12deg,
+    transparent 12deg 30deg
+  );
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 30%, transparent 70%);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 30%, transparent 70%);
+  animation: raySpin 3.2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes raySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ガラスドーム */
+.lamp {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 42%),
+    radial-gradient(circle at 50% 55%, #34305e, #17152e 75%);
+  box-shadow:
+    0 0 0 3px #3a3745,
+    0 0 0 6px #b9b9c8,
+    0 0 0 7px #55525e,
+    0 6px 12px rgba(0, 0, 0, 0.6),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.55),
+    inset 0 4px 6px rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s;
+}
+
+/* ドームのハイライト */
+.lamp::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  left: 16%;
+  width: 46%;
+  height: 30%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+.face {
+  font-size: 40px;
+  color: #443f78;
+  transition: color 0.2s;
+}
+
+.on {
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), transparent 44%),
+    radial-gradient(circle at 50% 58%, #fff6c9 0%, #ffd23f 45%, #f08c00 100%);
+  animation: pulse 0.85s ease-in-out infinite;
+}
+
+.on .face {
+  color: #a34e00;
+  animation: wobble 0.85s ease-in-out infinite;
+}
+
+.rainbow {
+  animation: rainbowBg 1.3s linear infinite, pulse 0.65s ease-in-out infinite;
+}
+
+.rainbow .face {
+  color: #fff;
+  animation: wobble 0.5s ease-in-out infinite;
+}
+
+.label {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #8b86b8;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px #3a3745,
+      0 0 0 6px #b9b9c8,
+      0 0 0 7px #55525e,
+      0 6px 12px rgba(0, 0, 0, 0.6),
+      inset 0 -8px 14px rgba(0, 0, 0, 0.35),
+      0 0 24px 6px rgba(255, 200, 60, 0.65);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #3a3745,
+      0 0 0 6px #b9b9c8,
+      0 0 0 7px #55525e,
+      0 6px 12px rgba(0, 0, 0, 0.6),
+      inset 0 -8px 14px rgba(0, 0, 0, 0.35),
+      0 0 46px 16px rgba(255, 200, 60, 0.95);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(-12deg) scale(1);
+  }
+  50% {
+    transform: rotate(12deg) scale(1.18);
+  }
+}
+
+@keyframes rainbowBg {
+  0% {
+    background: radial-gradient(circle at 50% 55%, #fff, #ff5d5d);
+  }
+  20% {
+    background: radial-gradient(circle at 50% 55%, #fff, #ffb84f);
+  }
+  40% {
+    background: radial-gradient(circle at 50% 55%, #fff, #ffe94f);
+  }
+  60% {
+    background: radial-gradient(circle at 50% 55%, #fff, #5dff7c);
+  }
+  80% {
+    background: radial-gradient(circle at 50% 55%, #fff, #5da9ff);
+  }
+  100% {
+    background: radial-gradient(circle at 50% 55%, #fff, #c45dff);
+  }
+}
