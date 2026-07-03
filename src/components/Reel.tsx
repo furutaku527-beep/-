@@ -22,31 +22,34 @@ export function Reel({ reel }: Props) {
     let raf = 0
 
     if (spinning) {
-      // 等速回転（実機の約75〜80rpm相当）
+      // 等速回転（実機の約75〜80rpm相当）。実機同様、図柄は上から下へ流れる
       const base = index
       const loop = () => {
         const elapsed = Date.now() - spinStartAt
-        setPos(base + elapsed / KOMA_MS)
+        setPos(base - elapsed / KOMA_MS)
         raf = requestAnimationFrame(loop)
       }
       raf = requestAnimationFrame(loop)
       return () => cancelAnimationFrame(raf)
     }
 
-    // 停止指示後：現在位置から停止位置まで「同じ速度のまま」前方に滑って止まる。
-    // ビタ止まりではなく最大4コマのすべりが見えるのが実機の挙動。
+    // 停止指示後：見えている位置から停止位置まで回転方向のまま滑って止まる。
+    // すべり0（ビタ）なら残りの端数だけ整列してその場で止まり、
+    // 引き込みがあるときだけ最大4コマのすべりが見える（実機の挙動）。
     const cur = posRef.current
-    const distance = (((index - cur) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
-    if (distance < 0.02) {
+    let travel = (((cur - index) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
+    // コマ内の端数によるほぼ一周分の巻き込みはビタ止まり（半コマ未満の戻し）として扱う
+    if (travel > STRIP_LENGTH - 1) travel -= STRIP_LENGTH
+    if (Math.abs(travel) < 0.02) {
       setPos(index)
       return
     }
     const startPos = cur
     const startT = performance.now()
-    const duration = distance * KOMA_MS
+    const duration = Math.max(40, Math.abs(travel) * KOMA_MS)
     const loop = (t: number) => {
       const k = Math.min(1, (t - startT) / duration)
-      setPos(startPos + distance * k)
+      setPos(startPos - travel * k)
       if (k < 1) {
         raf = requestAnimationFrame(loop)
       }

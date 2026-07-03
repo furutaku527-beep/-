@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { drawAnnounceTiming, drawPremium, spin } from '../game/lottery'
 import { BET, BONUS_GAMES, BONUS_GAME_PAYOUT, smallPayout } from '../game/payouts'
-import { checkBonusAligned, resolveStop, STRIP_LENGTH, symbolAt } from '../game/reels'
+import { checkBonusAligned, resolveStop, STRIP_LENGTH, symbolAt, windowSymbols } from '../game/reels'
 import type { AnnounceTiming, BonusKind, Flag, SettingLevel } from '../game/types'
 import * as sfx from '../audio/sfx'
 import { useStatsStore } from './statsStore'
@@ -71,9 +71,15 @@ interface GameState {
   resetAll: () => void
 }
 
+/**
+ * 回転中に「いま中段にある」図柄のindex。
+ * 実機同様、図柄は上から下へ流れる＝indexは回転で減っていく。
+ * round で視覚上の中段に最も近いコマを取る（floorだと見た目より最大1コマ遅れる）。
+ */
 function currentIndex(baseIndex: number, spinStartAt: number): number {
   const elapsed = Date.now() - spinStartAt
-  return (baseIndex + Math.floor(elapsed / KOMA_MS)) % STRIP_LENGTH
+  const advanced = Math.round(elapsed / KOMA_MS)
+  return (((baseIndex - advanced) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
 }
 
 /** 直近のリール始動時刻（ウェイト計算用） */
@@ -164,8 +170,8 @@ export const useGameStore = create<GameState>()(
 
         if (reels.every((r) => !r.spinning)) {
           // すべり演出（最大4コマ）が映像上で止まりきるのを待ってから精算
-          const slip = (stopIndex - cur + STRIP_LENGTH) % STRIP_LENGTH
-          const delay = slip * KOMA_MS + 80
+          const slip = (cur - stopIndex + STRIP_LENGTH) % STRIP_LENGTH
+          const delay = slip * KOMA_MS + 100
           set({ reels, settling: true })
           settleTimer = setTimeout(() => {
             settleTimer = null
@@ -362,10 +368,12 @@ function settle(set: Set, get: Get): void {
 
   // --- 通常時の払い出し ---
   const flag = s.flag ?? { role: 'NONE' as const, midCherry: false }
-  const payout = smallPayout(flag.role)
+  // チェリーは取りこぼしあり：左リールの表示窓にチェリーが止まっていなければ払い出しなし
+  const cherryIn = flag.role !== 'CHERRY' || windowSymbols(0, s.reels[0].index).includes('CHERRY')
+  const payout = cherryIn ? smallPayout(flag.role) : 0
   const bet = BET
 
-  if (flag.role === 'GRAPE' || flag.role === 'CHERRY' || flag.role === 'REPLAY') {
+  if (flag.role === 'GRAPE' || flag.role === 'REPLAY' || (flag.role === 'CHERRY' && cherryIn)) {
     stats.countRole(flag.role)
   }
 

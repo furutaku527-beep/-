@@ -6,6 +6,7 @@ import {
   STRIP_LENGTH,
   STRIPS,
   symbolAt,
+  windowSymbols,
 } from '../src/game/reels'
 import type { Flag } from '../src/game/types'
 
@@ -58,9 +59,38 @@ describe('停止制御', () => {
     for (let reel = 0; reel < 3; reel++) {
       for (let cur = 0; cur < STRIP_LENGTH; cur++) {
         const idx = resolveStop(reel, cur, flag, null, [null, null, null])
-        const slip = (idx - cur + STRIP_LENGTH) % STRIP_LENGTH
+        // 回転方向はindexが減る向きなので、すべり＝cur − idx
+        const slip = (cur - idx + STRIP_LENGTH) % STRIP_LENGTH
         expect(slip).toBeLessThanOrEqual(4)
       }
+    }
+  })
+
+  it('ハズレ時の第1停止はビタ止まり（押した位置で止まる）', () => {
+    for (let cur = 0; cur < STRIP_LENGTH; cur++) {
+      expect(resolveStop(0, cur, noFlag, null, [null, null, null])).toBe(cur)
+    }
+  })
+
+  it('左リールBAR狙いならチェリーが滑ってきて止まる（±1コマの押しズレ込み）', () => {
+    const flag: Flag = { role: 'CHERRY', midCherry: false }
+    const bars = STRIPS[0].flatMap((s, i) => (s === 'BAR' ? [i] : []))
+    expect(bars.length).toBeGreaterThan(0)
+    for (const bar of bars) {
+      for (const d of [-1, 0, 1]) {
+        const cur = (bar + d + STRIP_LENGTH) % STRIP_LENGTH
+        const idx = resolveStop(0, cur, flag, null, [null, null, null])
+        expect(windowSymbols(0, idx)).toContain('CHERRY')
+      }
+    }
+  })
+
+  it('中段チェリー成立時はBAR狙いで左リール中段にチェリーが止まる', () => {
+    const flag: Flag = { role: 'BIG', midCherry: true }
+    const bars = STRIPS[0].flatMap((s, i) => (s === 'BAR' ? [i] : []))
+    for (const bar of bars) {
+      const idx = resolveStop(0, bar, flag, 'BIG', [null, null, null])
+      expect(symbolAt(0, idx)).toBe('CHERRY')
     }
   })
 
