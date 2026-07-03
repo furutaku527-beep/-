@@ -52,10 +52,22 @@ function tone(freq: number, durationMs: number, opts: { type?: OscillatorType; g
   osc.stop(t1 + 0.05)
 }
 
+/** メダル投入音（3枚分のクリック） */
+export function playBet(): void {
+  tone(1900, 30, { type: 'square', gain: 0.05 })
+  tone(2100, 30, { type: 'square', gain: 0.05, delayMs: 70 })
+  tone(2300, 35, { type: 'square', gain: 0.05, delayMs: 140 })
+}
+
 /** レバーON音 */
 export function playLever(): void {
   tone(220, 80, { type: 'sawtooth', gain: 0.06 })
   tone(440, 60, { type: 'square', gain: 0.04, delayMs: 40 })
+}
+
+/** リール始動音（ウェイト明けの回転開始） */
+export function playReelStart(): void {
+  tone(160, 120, { type: 'sawtooth', gain: 0.05, slideTo: 320 })
 }
 
 /** リール停止音 */

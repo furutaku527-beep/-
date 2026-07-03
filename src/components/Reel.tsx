@@ -15,20 +15,44 @@ export function Reel({ reel }: Props) {
   const index = useGameStore((s) => s.reels[reel].index)
   const spinStartAt = useGameStore((s) => s.spinStartAt)
   const [pos, setPos] = useState<number>(index)
-  const rafRef = useRef(0)
+  const posRef = useRef(pos)
+  posRef.current = pos
 
   useEffect(() => {
-    if (!spinning) {
+    let raf = 0
+
+    if (spinning) {
+      // 等速回転（実機の約75〜80rpm相当）
+      const base = index
+      const loop = () => {
+        const elapsed = Date.now() - spinStartAt
+        setPos(base + elapsed / KOMA_MS)
+        raf = requestAnimationFrame(loop)
+      }
+      raf = requestAnimationFrame(loop)
+      return () => cancelAnimationFrame(raf)
+    }
+
+    // 停止指示後：現在位置から停止位置まで「同じ速度のまま」前方に滑って止まる。
+    // ビタ止まりではなく最大4コマのすべりが見えるのが実機の挙動。
+    const cur = posRef.current
+    const distance = (((index - cur) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
+    if (distance < 0.02) {
       setPos(index)
       return
     }
-    const loop = () => {
-      const elapsed = Date.now() - spinStartAt
-      setPos(index + elapsed / KOMA_MS)
-      rafRef.current = requestAnimationFrame(loop)
+    const startPos = cur
+    const startT = performance.now()
+    const duration = distance * KOMA_MS
+    const loop = (t: number) => {
+      const k = Math.min(1, (t - startT) / duration)
+      setPos(startPos + distance * k)
+      if (k < 1) {
+        raf = requestAnimationFrame(loop)
+      }
     }
-    rafRef.current = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(rafRef.current)
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
   }, [spinning, index, spinStartAt])
 
   const base = Math.floor(pos)

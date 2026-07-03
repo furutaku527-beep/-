@@ -1,0 +1,48 @@
+/* ホール設置のデータカウンター風：黒地にLEDデジタル */
+.counter {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #15131f, #060510);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px #3a3745,
+    0 0 0 3px #14121f,
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex: 1;
+}
+
+.label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #6b6790;
+  font-weight: 700;
+}
+
+.digits {
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 21px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #39e63f;
+  text-shadow: 0 0 6px rgba(57, 230, 63, 0.9), 0 0 16px rgba(57, 230, 63, 0.4);
+}
+
+.big {
+  color: #ff5d8f;
+  text-shadow: 0 0 6px rgba(255, 93, 143, 0.9), 0 0 16px rgba(255, 93, 143, 0.4);
+}
+
+.reg {
+  color: #4fc3f7;
+  text-shadow: 0 0 6px rgba(79, 195, 247, 0.9), 0 0 16px rgba(79, 195, 247, 0.4);
+}
