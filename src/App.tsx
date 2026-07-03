@@ -7,6 +7,8 @@ import { DebugMenu } from './components/DebugMenu'
 import { NotifyLamp } from './components/NotifyLamp'
 import { ReelSet } from './components/ReelSet'
 import { StatsPanel } from './components/StatsPanel'
+import { StatusLamps } from './components/StatusLamps'
+import { TopCounter } from './components/TopCounter'
 import { useAchievementsStore } from './state/achievementsStore'
 import { useGameStore } from './state/gameStore'
 import bgUrl from './assets/bg.webp'
@@ -45,6 +47,8 @@ export default function App() {
         </h1>
       </header>
 
+      <TopCounter />
+
       <main className={styles.machine}>
         <div
           className={styles.marquee}
@@ -66,6 +70,7 @@ export default function App() {
         </div>
         <CreditDisplay />
         <ReelSet />
+        <StatusLamps />
         <Controls />
       </main>
 

@@ -23,7 +23,8 @@
 }
 
 .spinning {
-  filter: blur(2px);
+  /* 目押しできるようブラーは最小限（図柄の色と形は追える） */
+  filter: blur(0.6px);
 }
 
 .cell {

@@ -8,8 +8,15 @@ import * as sfx from '../audio/sfx'
 import { useStatsStore } from './statsStore'
 import { useAchievementsStore } from './achievementsStore'
 
-/** 1コマ進むのにかかるミリ秒（リール回転速度） */
-export const KOMA_MS = 45
+/**
+ * 1コマ進むのにかかるミリ秒。
+ * 実機の規定は約80rpm（1周750ms）＝ 21コマで約36ms/コマ。
+ * ここでは規定内の約75rpmに設定（1周798ms）。
+ */
+export const KOMA_MS = 38
+
+/** ゲーム間の最短間隔（4.1秒ウェイト・実機規定） */
+export const WAIT_MS = 4100
 
 export type LampState = 'off' | 'on' | 'rainbow'
 
@@ -25,6 +32,13 @@ interface GameState {
   muted: boolean
   auto: boolean
 
+  /** メダル投入済み（レバーON可能） */
+  betPlaced: boolean
+  /** 4.1秒ウェイト消化待ち（レバーON済みでリール始動待ち） */
+  waiting: boolean
+  /** 第3リール停止後、すべり演出中で精算待ち */
+  settling: boolean
+
   /** 全リール停止でアイドル。1つでも回転中なら spinning */
   reels: [ReelState, ReelState, ReelState]
   spinStartAt: number
@@ -39,13 +53,15 @@ interface GameState {
   announceTiming: AnnounceTiming | null
   /** 今ゲームがプレミアム告知か */
   premium: boolean
-  /** 次ゲームはリプレイ（投入不要） */
+  /** 次ゲームはリプレイ（自動ベット・投入不要） */
   replayNext: boolean
   /** 直近の払い出し表示 */
   lastPayout: number
   /** 演出用メッセージ */
   message: string
 
+  betMax: () => void
+  /** レバーON */
   startSpin: () => void
   stopReel: (i: number) => void
   setSetting: (level: SettingLevel) => void
@@ -60,6 +76,11 @@ function currentIndex(baseIndex: number, spinStartAt: number): number {
   return (baseIndex + Math.floor(elapsed / KOMA_MS)) % STRIP_LENGTH
 }
 
+/** 直近のリール始動時刻（ウェイト計算用） */
+let lastReelStartAt = 0
+let waitTimer: ReturnType<typeof setTimeout> | null = null
+let settleTimer: ReturnType<typeof setTimeout> | null = null
+
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
@@ -67,6 +88,9 @@ export const useGameStore = create<GameState>()(
       setting: 3,
       muted: false,
       auto: false,
+      betPlaced: false,
+      waiting: false,
+      settling: false,
       reels: [
         { spinning: false, index: 2 },
         { spinning: false, index: 4 },
@@ -84,61 +108,40 @@ export const useGameStore = create<GameState>()(
       lastPayout: 0,
       message: '',
 
+      betMax: () => {
+        const s = get()
+        if (s.betPlaced || s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
+        if (s.replayNext) return // リプレイは自動ベット済み
+        if (s.credits < BET) return
+        sfx.unlockAudio()
+        sfx.playBet()
+        set({ credits: s.credits - BET, betPlaced: true, lastPayout: 0, message: '' })
+      },
+
       startSpin: () => {
         const s = get()
-        if (s.reels.some((r) => r.spinning)) return
-        const free = s.replayNext
-        if (!free && s.credits < BET) return
+        if (s.reels.some((r) => r.spinning) || s.waiting || s.settling) return
+        if (!s.betPlaced) return
 
         sfx.unlockAudio()
         sfx.playLever()
 
-        let flag: Flag = { role: 'NONE', midCherry: false }
-        let pendingBonus = s.pendingBonus
-        let lamp: LampState = s.lamp
-        let announceTiming = s.announceTiming
-        let premium = s.premium
-        let message = ''
-
-        if (!s.inBonus && !pendingBonus) {
-          // 通常時のみ内部抽選
-          flag = spin(s.setting)
-          if (flag.role === 'BIG' || flag.role === 'REG') {
-            pendingBonus = flag.role
-            announceTiming = drawAnnounceTiming()
-            premium = drawPremium(s.setting, flag.midCherry)
-            if (announceTiming === 'pre') {
-              lamp = premium ? 'rainbow' : 'on'
-              sfx.playNotify()
-              if (premium) sfx.playPremium()
-            }
-          }
+        // 4.1秒ウェイト：前回のリール始動から規定時間が経つまで始動を遅らせる
+        const delay = Math.max(0, lastReelStartAt + WAIT_MS - Date.now())
+        if (delay > 0) {
+          set({ waiting: true })
+          waitTimer = setTimeout(() => {
+            waitTimer = null
+            doStart(set, get)
+          }, delay)
+          return
         }
-
-        if (flag.midCherry) message = '中段チェリー!?'
-
-        set({
-          credits: free ? s.credits : s.credits - BET,
-          reels: [
-            { spinning: true, index: s.reels[0].index },
-            { spinning: true, index: s.reels[1].index },
-            { spinning: true, index: s.reels[2].index },
-          ],
-          spinStartAt: Date.now(),
-          flag,
-          pendingBonus,
-          lamp,
-          announceTiming,
-          premium,
-          replayNext: false,
-          lastPayout: 0,
-          message,
-        })
+        doStart(set, get)
       },
 
       stopReel: (i) => {
         const s = get()
-        if (!s.reels[i].spinning || !s.flag) return
+        if (!s.reels[i].spinning || !s.flag || s.settling) return
 
         const cur = currentIndex(s.reels[i].index, s.spinStartAt)
         const lineSoFar: (ReturnType<typeof symbolAt> | null)[] = s.reels.map((r, j) =>
@@ -159,10 +162,18 @@ export const useGameStore = create<GameState>()(
           j === i ? { spinning: false, index: stopIndex } : r,
         ) as [ReelState, ReelState, ReelState]
 
-        set({ reels })
-
         if (reels.every((r) => !r.spinning)) {
-          settle(set, get)
+          // すべり演出（最大4コマ）が映像上で止まりきるのを待ってから精算
+          const slip = (stopIndex - cur + STRIP_LENGTH) % STRIP_LENGTH
+          const delay = slip * KOMA_MS + 80
+          set({ reels, settling: true })
+          settleTimer = setTimeout(() => {
+            settleTimer = null
+            set({ settling: false })
+            settle(set, get)
+          }, delay)
+        } else {
+          set({ reels })
         }
       },
 
@@ -177,11 +188,20 @@ export const useGameStore = create<GameState>()(
 
       resetAll: () => {
         sfx.stopBonusBgm()
+        clearAutoTimers()
+        if (waitTimer) clearTimeout(waitTimer)
+        if (settleTimer) clearTimeout(settleTimer)
+        waitTimer = null
+        settleTimer = null
+        lastReelStartAt = 0
         useStatsStore.getState().reset()
         useAchievementsStore.getState().reset()
         set({
           credits: 500,
           auto: false,
+          betPlaced: false,
+          waiting: false,
+          settling: false,
           reels: [
             { spinning: false, index: 2 },
             { spinning: false, index: 4 },
@@ -206,6 +226,7 @@ export const useGameStore = create<GameState>()(
         credits: s.credits,
         setting: s.setting,
         muted: s.muted,
+        betPlaced: s.betPlaced,
         pendingBonus: s.pendingBonus,
         inBonus: s.inBonus,
         bonusGamesLeft: s.bonusGamesLeft,
@@ -223,6 +244,57 @@ export const useGameStore = create<GameState>()(
 
 type Set = (partial: Partial<GameState> | ((s: GameState) => Partial<GameState>)) => void
 type Get = () => GameState
+
+/** レバーON成立後、実際にリールを始動する */
+function doStart(set: Set, get: Get): void {
+  const s = get()
+
+  let flag: Flag = { role: 'NONE', midCherry: false }
+  let pendingBonus = s.pendingBonus
+  let lamp: LampState = s.lamp
+  let announceTiming = s.announceTiming
+  let premium = s.premium
+  let message = ''
+
+  if (!s.inBonus && !pendingBonus) {
+    // 通常時のみ内部抽選（レバーONの瞬間に当選役が確定する）
+    flag = spin(s.setting)
+    if (flag.role === 'BIG' || flag.role === 'REG') {
+      pendingBonus = flag.role
+      announceTiming = drawAnnounceTiming()
+      premium = drawPremium(s.setting, flag.midCherry)
+      if (announceTiming === 'pre') {
+        lamp = premium ? 'rainbow' : 'on'
+        sfx.playNotify()
+        if (premium) sfx.playPremium()
+      }
+    }
+  }
+
+  if (flag.midCherry) message = '中段チェリー!?'
+
+  lastReelStartAt = Date.now()
+  sfx.playReelStart()
+
+  set({
+    waiting: false,
+    betPlaced: false,
+    reels: [
+      { spinning: true, index: s.reels[0].index },
+      { spinning: true, index: s.reels[1].index },
+      { spinning: true, index: s.reels[2].index },
+    ],
+    spinStartAt: lastReelStartAt,
+    flag,
+    pendingBonus,
+    lamp,
+    announceTiming,
+    premium,
+    replayNext: false,
+    lastPayout: 0,
+    message,
+  })
+}
 
 /** 全リール停止後の精算処理 */
 function settle(set: Set, get: Get): void {
@@ -300,7 +372,8 @@ function settle(set: Set, get: Get): void {
   if (flag.role === 'REPLAY') {
     stats.addGame(0, 0) // リプレイは実質投入なし
     sfx.playReplay()
-    set({ replayNext: true, lastPayout: 0, message: 'リプレイ' })
+    // リプレイは自動ベット（次ゲームは投入不要でレバーON可能）
+    set({ replayNext: true, betPlaced: true, lastPayout: 0, message: 'リプレイ' })
   } else {
     stats.addGame(payout, bet)
     if (payout > 0) {
@@ -322,33 +395,55 @@ function checkAchievements(get: Get): void {
   })
 }
 
-/** オートプレイ：停止後に自動で次ゲームを開始し、順番に止める */
+/** オートプレイ：投入→レバー→順番に停止、を繰り返す */
 let autoTimers: ReturnType<typeof setTimeout>[] = []
 
 function maybeAuto(get: Get): void {
   const s = get()
   if (!s.auto) return
   clearAutoTimers()
-  autoTimers.push(
-    setTimeout(() => {
-      const st = useGameStore.getState()
-      if (!st.auto || st.reels.some((r) => r.spinning)) return
-      if (!st.replayNext && st.credits < BET) {
-        useGameStore.setState({ auto: false })
-        return
-      }
-      st.startSpin()
-      // 各リールをランダムなタイミングで停止
-      const delays = [500, 800, 1100].map((d) => d + Math.random() * 300)
+  autoTimers.push(setTimeout(autoStep, 400))
+}
+
+function autoStep(): void {
+  const st = useGameStore.getState()
+  if (!st.auto) return
+  if (st.reels.some((r) => r.spinning) || st.settling) {
+    autoTimers.push(setTimeout(autoStep, 200))
+    return
+  }
+  if (!st.betPlaced) {
+    if (st.credits < BET) {
+      useGameStore.setState({ auto: false })
+      return
+    }
+    st.betMax()
+  }
+  useGameStore.getState().startSpin()
+
+  // ウェイト中の可能性があるため、リールが実際に回り始めてから停止を予約する
+  const poll = setInterval(() => {
+    const s = useGameStore.getState()
+    if (!s.auto) {
+      clearInterval(poll)
+      return
+    }
+    if (s.reels.every((r) => r.spinning)) {
+      clearInterval(poll)
+      const delays = [600, 950, 1300].map((d) => d + Math.random() * 300)
       delays.forEach((d, i) => {
         autoTimers.push(setTimeout(() => useGameStore.getState().stopReel(i), d))
       })
-    }, 350),
-  )
+    }
+  }, 120)
+  autoTimers.push(poll as unknown as ReturnType<typeof setTimeout>)
 }
 
 export function clearAutoTimers(): void {
-  autoTimers.forEach(clearTimeout)
+  autoTimers.forEach((t) => {
+    clearTimeout(t)
+    clearInterval(t as unknown as ReturnType<typeof setInterval>)
+  })
   autoTimers = []
 }
 

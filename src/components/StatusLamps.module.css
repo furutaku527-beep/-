@@ -1,0 +1,89 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #0a0918;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+
+.betGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.groupLabel {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #56527a;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.betDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #3a3660;
+  background: #171430;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  transition: all 0.15s;
+}
+
+.betDot.lit {
+  color: #4a2500;
+  background: radial-gradient(circle at 35% 30%, #fff0a8, #ffc93c 70%);
+  box-shadow: 0 0 8px 1px rgba(255, 200, 60, 0.7);
+}
+
+.lamp {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #3a3660;
+  background: #171430;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  transition: all 0.15s;
+}
+
+.replay.lit {
+  color: #06283d;
+  background: #4fc3f7;
+  box-shadow: 0 0 10px 1px rgba(79, 195, 247, 0.7);
+}
+
+.wait.lit {
+  color: #3d1010;
+  background: #ff8a65;
+  box-shadow: 0 0 10px 1px rgba(255, 138, 101, 0.7);
+  animation: waitBlink 0.5s step-end infinite;
+}
+
+.start.lit {
+  color: #0d3320;
+  background: #66df96;
+  box-shadow: 0 0 10px 1px rgba(102, 223, 150, 0.7);
+}
+
+.bonus.lit {
+  color: #3d0a1c;
+  background: #ff5d8f;
+  box-shadow: 0 0 10px 1px rgba(255, 93, 143, 0.75);
+  animation: waitBlink 0.7s step-end infinite;
+}
+
+@keyframes waitBlink {
+  50% {
+    opacity: 0.45;
+  }
+}
