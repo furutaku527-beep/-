@@ -18,13 +18,10 @@
     inset 0 -10px 14px rgba(0, 0, 0, 0.5);
 }
 
+/* 回転はtransformのみで駆動（ブラーなし＝目押し優先） */
 .strip {
   will-change: transform;
-}
-
-.spinning {
-  /* 目押しできるようブラーは最小限（図柄の色と形は追える） */
-  filter: blur(0.6px);
+  backface-visibility: hidden;
 }
 
 .cell {
@@ -34,14 +31,59 @@
   line-height: 1;
 }
 
+/* 中段の目安ライン（目押しの基準） */
 .payline {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
   height: 0;
-  border-top: 1.5px solid rgba(255, 60, 60, 0.22);
+  border-top: 1.5px solid rgba(255, 60, 60, 0.28);
   pointer-events: none;
+}
+
+.payline::before,
+.payline::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+.payline::before {
+  left: 0;
+  border-left: 6px solid rgba(255, 70, 70, 0.75);
+}
+
+.payline::after {
+  right: 0;
+  border-right: 6px solid rgba(255, 70, 70, 0.75);
+}
+
+/* 入賞ラインの点滅（実機のライン点滅ランプ風） */
+.winRow {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 64px;
+  border-radius: 8px;
+  pointer-events: none;
+  background: rgba(255, 214, 90, 0.2);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 218, 90, 0.95),
+    inset 0 0 18px rgba(255, 200, 60, 0.55),
+    0 0 10px rgba(255, 200, 60, 0.35);
+  animation: winBlink 0.36s steps(2, jump-none) infinite;
+}
+
+@keyframes winBlink {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.25;
+  }
 }
 
 /* ガラスの映り込み */
