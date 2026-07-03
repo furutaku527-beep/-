@@ -8,12 +8,17 @@ export const MAX_SLIP = 4
 
 /**
  * リール配列（左・中・右）。
+ * 実機同様、図柄は表示窓を上から下へ流れる（＝回転中は中段のindexが減っていく）。
+ * すべりで引き込まれるのは「窓より上にある＝indexが小さい側」の図柄。
+ *
  * ぶどう・リプレイはどの位置からでも4コマ以内に引き込める配置。
  * ボーナス図柄（STAR/BAR）は引き込める位置が限られるため目押しが必要。
+ * 左リールはBARの2コマ上にチェリー・3コマ上にSTARを配置してあり、
+ * BAR付近を狙えばチェリーもボーナスも同時にフォローできる（実機の左リールBAR狙いと同じ）。
  */
 export const STRIPS: [Symbol[], Symbol[], Symbol[]] = [
-  // 左リール
-  ['STAR', 'GRAPE', 'REPLAY', 'BAR', 'GRAPE', 'CHERRY', 'REPLAY', 'GRAPE', 'BELL', 'REPLAY', 'GRAPE', 'STAR', 'REPLAY', 'GRAPE', 'CHERRY', 'REPLAY', 'GRAPE', 'CLOWN', 'REPLAY', 'GRAPE', 'BAR'],
+  // 左リール（BAR: 7,18 ／ チェリー: 5,16 ／ STAR: 4,15）
+  ['REPLAY', 'CLOWN', 'GRAPE', 'REPLAY', 'STAR', 'CHERRY', 'GRAPE', 'BAR', 'REPLAY', 'GRAPE', 'BELL', 'GRAPE', 'REPLAY', 'GRAPE', 'REPLAY', 'STAR', 'CHERRY', 'GRAPE', 'BAR', 'REPLAY', 'GRAPE'],
   // 中リール
   ['STAR', 'GRAPE', 'REPLAY', 'CHERRY', 'GRAPE', 'BELL', 'REPLAY', 'GRAPE', 'BAR', 'REPLAY', 'GRAPE', 'STAR', 'REPLAY', 'GRAPE', 'CLOWN', 'REPLAY', 'GRAPE', 'CHERRY', 'REPLAY', 'GRAPE', 'BAR'],
   // 右リール
@@ -41,10 +46,13 @@ export function windowSymbols(reel: number, index: number): [Symbol, Symbol, Sym
   return [symbolAt(reel, index - 1), symbolAt(reel, index), symbolAt(reel, index + 1)]
 }
 
-/** cur から MAX_SLIP コマ以内で target 図柄を中段に引き込める停止位置。なければ null */
+/**
+ * cur から MAX_SLIP コマ以内で target 図柄を中段に引き込める停止位置。なければ null。
+ * 回転方向は index が減る向きなので、すべり分だけ index を引いた位置を探す。
+ */
 export function findPullIn(reel: number, cur: number, target: Symbol): number | null {
   for (let slip = 0; slip <= MAX_SLIP; slip++) {
-    const idx = (cur + slip) % STRIP_LENGTH
+    const idx = (((cur - slip) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
     if (symbolAt(reel, idx) === target) return idx
   }
   return null
@@ -53,7 +61,7 @@ export function findPullIn(reel: number, cur: number, target: Symbol): number | 
 /** cur から MAX_SLIP コマ以内で target 図柄を「避けて」停止する位置 */
 function avoidSymbols(reel: number, cur: number, avoid: Symbol[]): number {
   for (let slip = 0; slip <= MAX_SLIP; slip++) {
-    const idx = (cur + slip) % STRIP_LENGTH
+    const idx = (((cur - slip) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
     if (!avoid.includes(symbolAt(reel, idx))) return idx
   }
   return cur % STRIP_LENGTH
@@ -83,6 +91,11 @@ export function resolveStop(
   cur = ((cur % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
 
   if (pendingBonus) {
+    // 中段チェリー成立ゲームは左リール中段にチェリーを止める（プレミアム演出）
+    if (flag.midCherry && reel === 0) {
+      const hit = findPullIn(0, cur, 'CHERRY')
+      if (hit !== null) return hit
+    }
     const target = bonusTarget(pendingBonus, reel)
     // それまでのリールが全てボーナス図柄で揃っている場合のみ引き込みが意味を持つが、
     // 実機同様どのリールでも常にボーナス図柄を狙って引き込む
@@ -105,10 +118,11 @@ export function resolveStop(
       return hit ?? avoidLineCompletion(reel, cur, lineSoFar)
     }
     case 'CHERRY': {
-      // 角チェリーは左リールにチェリーを引き込む（上下どちらかの角に出る）
+      // 角チェリーは左リールにチェリーを引き込む（上下どちらかの角に出る）。
+      // 引き込み範囲外なら取りこぼし（実機同様、チェリーはこぼれることがある）
       if (reel === 0) {
         for (let slip = 0; slip <= MAX_SLIP; slip++) {
-          const idx = (cur + slip) % STRIP_LENGTH
+          const idx = (((cur - slip) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
           const [top, , bottom] = windowSymbols(reel, idx)
           if (top === 'CHERRY' || bottom === 'CHERRY') return idx
         }
