@@ -51,6 +51,8 @@ interface GameState {
   /** 全リール停止でアイドル。1つでも回転中なら spinning */
   reels: [ReelState, ReelState, ReelState]
   spinStartAt: number
+  /** 今回の回転で使う1コマあたりミリ秒（回転中に速度設定が変わってもブレないよう固定） */
+  spinKoma: number
   /** 今ゲームの内部フラグ */
   flag: Flag | null
   /** 成立中（持ち越し中）のボーナス */
@@ -70,6 +72,8 @@ interface GameState {
   message: string
   /** 入賞ライン点滅用：光らせるセル [リール, 行(-1/0/+1)] の一覧 */
   winCells: [number, number][]
+  /** リール速度（%）。100=実機準拠0.75秒/周、小さいほどゆっくり（目押し用） */
+  reelSpeedPct: number
 
   betMax: () => void
   /** 1枚がけ（MAX BET後に押した場合は差額を払い戻して1枚がけに変更） */
@@ -79,6 +83,7 @@ interface GameState {
   stopReel: (i: number) => void
   setSetting: (level: SettingLevel) => void
   setAuto: (auto: boolean) => void
+  setReelSpeed: (pct: number) => void
   toggleMute: () => void
   addCredits: (n: number) => void
   resetAll: () => void
@@ -89,10 +94,15 @@ interface GameState {
  * 実機同様、図柄は上から下へ流れる＝indexは回転で減っていく。
  * round で視覚上の中段に最も近いコマを取る（floorだと見た目より最大1コマ遅れる）。
  */
-function currentIndex(baseIndex: number, spinStartAt: number): number {
+function currentIndex(baseIndex: number, spinStartAt: number, koma: number): number {
   const elapsed = Date.now() - spinStartAt
-  const advanced = Math.round(elapsed / KOMA_MS)
+  const advanced = Math.round(elapsed / koma)
   return (((baseIndex - advanced) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
+}
+
+/** リール速度(%)から実効の1コマあたりミリ秒を求める（%が小さいほど遅い＝大きいkoma） */
+export function komaMsFor(pct: number): number {
+  return (KOMA_MS * 100) / Math.max(20, Math.min(100, pct))
 }
 
 /** 直近のリール始動時刻（ウェイト計算用） */
@@ -117,6 +127,7 @@ export const useGameStore = create<GameState>()(
         { spinning: false, index: 6 },
       ],
       spinStartAt: 0,
+      spinKoma: KOMA_MS,
       flag: null,
       pendingBonus: null,
       inBonus: null,
@@ -128,6 +139,7 @@ export const useGameStore = create<GameState>()(
       lastPayout: 0,
       message: '',
       winCells: [],
+      reelSpeedPct: 100,
 
       betMax: () => {
         const s = get()
@@ -182,7 +194,8 @@ export const useGameStore = create<GameState>()(
         const s = get()
         if (!s.reels[i].spinning || !s.flag || s.settling) return
 
-        const cur = currentIndex(s.reels[i].index, s.spinStartAt)
+        const koma = s.spinKoma
+        const cur = currentIndex(s.reels[i].index, s.spinStartAt, koma)
         const stoppedIdx: (number | null)[] = s.reels.map((r, j) =>
           r.spinning || j === i ? null : r.index,
         )
@@ -204,7 +217,7 @@ export const useGameStore = create<GameState>()(
         if (reels.every((r) => !r.spinning)) {
           // すべり演出（最大4コマ）が映像上で止まりきるのを待ってから精算
           const slip = (cur - stopIndex + STRIP_LENGTH) % STRIP_LENGTH
-          const delay = slip * KOMA_MS + 100
+          const delay = slip * koma + 100
           set({ reels, settling: true })
           settleTimer = setTimeout(() => {
             settleTimer = null
@@ -218,6 +231,7 @@ export const useGameStore = create<GameState>()(
 
       setSetting: (level) => set({ setting: level }),
       setAuto: (auto) => set({ auto }),
+      setReelSpeed: (pct) => set({ reelSpeedPct: Math.max(20, Math.min(100, Math.round(pct))) }),
       toggleMute: () => {
         const m = !get().muted
         sfx.setMuted(m)
@@ -276,6 +290,7 @@ export const useGameStore = create<GameState>()(
         announceTiming: s.announceTiming,
         premium: s.premium,
         replayNext: s.replayNext,
+        reelSpeedPct: s.reelSpeedPct,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) sfx.setMuted(state.muted)
@@ -329,6 +344,7 @@ function doStart(set: Set, get: Get): void {
       { spinning: true, index: s.reels[2].index },
     ],
     spinStartAt: lastReelStartAt,
+    spinKoma: komaMsFor(s.reelSpeedPct),
     flag,
     pendingBonus,
     lamp,

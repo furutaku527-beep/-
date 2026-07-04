@@ -21,6 +21,8 @@ export function Controls() {
   const replayNext = useGameStore((s) => s.replayNext)
   const inBonus = useGameStore((s) => s.inBonus)
   const addCredits = useGameStore((s) => s.addCredits)
+  const reelSpeedPct = useGameStore((s) => s.reelSpeedPct)
+  const setReelSpeed = useGameStore((s) => s.setReelSpeed)
   const [pulled, setPulled] = useState(false)
 
   const anySpinning = reels.some((r) => r.spinning)
@@ -38,6 +40,14 @@ export function Controls() {
     setTimeout(() => setPulled(false), 220)
     startSpin()
   }
+
+  // 目押し用の速度切替（実速→ゆっくり→超スロー→実速…）
+  const SPEEDS = [100, 70, 50]
+  const cycleSpeed = () => {
+    const i = SPEEDS.indexOf(reelSpeedPct)
+    setReelSpeed(SPEEDS[(i + 1) % SPEEDS.length] ?? 100)
+  }
+  const speedLabel = reelSpeedPct >= 100 ? '実速' : `${reelSpeedPct}%`
 
   const toggleAuto = () => {
     const next = !auto
@@ -90,6 +100,13 @@ export function Controls() {
               onClick={toggleAuto}
             >
               AUTO
+            </button>
+            <button
+              className={`${styles.sideBtn} ${reelSpeedPct < 100 ? styles.sideActive : ''}`}
+              onClick={cycleSpeed}
+              title="リール速度（目押し用）"
+            >
+              速度 {speedLabel}
             </button>
             <button className={styles.sideBtn} onClick={toggleMute}>
               {muted ? '♪ OFF' : '♪ ON'}
