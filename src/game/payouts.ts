@@ -14,9 +14,9 @@ export const SMALL_PAYOUTS: Partial<Record<Role, number>> = {
 /** ボーナス中の1ゲームあたり払い出し枚数 */
 export const BONUS_GAME_PAYOUT = 15
 
-/** ボーナス消化ゲーム数（純増 = (15-3) × ゲーム数 → BIG:240枚 / REG:96枚） */
+/** ボーナス消化ゲーム数（純増 = (15-3) × ゲーム数 → BIG:252枚 / REG:96枚。アイム相当） */
 export const BONUS_GAMES: Record<BonusKind, number> = {
-  BIG: 20,
+  BIG: 21,
   REG: 8,
 }
 
