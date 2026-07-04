@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { STRIP_LENGTH, symbolAt } from '../game/reels'
-import { KOMA_MS, useGameStore } from '../state/gameStore'
+import { useGameStore } from '../state/gameStore'
 import { SlotSymbol } from './symbols'
 import styles from './Reel.module.css'
 
@@ -20,6 +20,7 @@ export function Reel({ reel }: Props) {
   const spinning = useGameStore((s) => s.reels[reel].spinning)
   const index = useGameStore((s) => s.reels[reel].index)
   const spinStartAt = useGameStore((s) => s.spinStartAt)
+  const koma = useGameStore((s) => s.spinKoma)
   const winCells = useGameStore((s) => s.winCells)
   const winRows = [...new Set(winCells.filter(([r]) => r === reel).map(([, row]) => row))]
 
@@ -46,11 +47,13 @@ export function Reel({ reel }: Props) {
     }
 
     if (spinning) {
-      // 等速回転（0.78秒/周）。実機同様、図柄は上から下へ流れる
+      // 等速回転。実機同様、図柄は上から下へ流れる。
+      // requestAnimationFrame は表示の最大リフレッシュレート（120Hz対応端末なら
+      // 120fps）で回り、位置は経過時刻から算出するのでfpsに依らず一定速度。
       const base = index
       const loop = () => {
         const elapsed = Date.now() - spinStartAt
-        apply(base - elapsed / KOMA_MS)
+        apply(base - elapsed / koma)
         raf = requestAnimationFrame(loop)
       }
       raf = requestAnimationFrame(loop)
@@ -68,7 +71,7 @@ export function Reel({ reel }: Props) {
     }
     const startPos = cur
     const startT = performance.now()
-    const duration = Math.max(40, Math.abs(travel) * KOMA_MS)
+    const duration = Math.max(40, Math.abs(travel) * koma)
     const loop = (t: number) => {
       const k = Math.min(1, (t - startT) / duration)
       apply(startPos - travel * k)
@@ -76,7 +79,7 @@ export function Reel({ reel }: Props) {
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [spinning, index, spinStartAt])
+  }, [spinning, index, spinStartAt, koma])
 
   return (
     <div className={styles.window} style={{ height: ITEM_H * 3 }}>
