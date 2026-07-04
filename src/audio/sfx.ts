@@ -176,21 +176,21 @@ export function playReplay(): void {
   tone(523, 65, { type: 'square', gain: 0.05, delayMs: 95 })
 }
 
-/** 告知ランプ点灯音（「ペカッ」＋和音の余韻） */
+/**
+ * 告知ランプ点灯音。
+ * 実機のGOGOランプは無音で点灯する（静かに光るのが「ペカ」）ため、
+ * 実機準拠であえて何も鳴らさない。
+ */
 export function playNotify(): void {
-  tone(1047, 130, { type: 'sine', gain: 0.14, slideTo: 2093 })
-  tone(2637, 70, { type: 'sine', gain: 0.08, delayMs: 115 })
-  tone(523, 380, { type: 'triangle', gain: 0.05, delayMs: 40 })
-  tone(659, 380, { type: 'triangle', gain: 0.05, delayMs: 40 })
-  tone(784, 380, { type: 'triangle', gain: 0.05, delayMs: 40 })
+  // 実機準拠：無音
 }
 
-/** プレミアム告知音（キュイーン系の上昇） */
+/** プレミアム告知「ガコッ」（実機のプレミア音を再現した金属衝撃音） */
 export function playPremium(): void {
-  tone(523, 650, { type: 'sawtooth', gain: 0.06, slideTo: 2093 })
-  const notes = [659, 784, 1047, 1319, 1568, 2093]
-  notes.forEach((f, i) => tone(f, 130, { type: 'sine', gain: 0.09, delayMs: 120 + i * 85 }))
-  noise(600, { filter: 'highpass', freq: 5000, gain: 0.025, delayMs: 150 })
+  noise(90, { filter: 'lowpass', freq: 260, gain: 0.5 })
+  tone(82, 130, { type: 'square', gain: 0.26, slideTo: 46 })
+  noise(45, { filter: 'bandpass', freq: 1100, q: 3, gain: 0.16, delayMs: 6 })
+  tone(190, 60, { type: 'sine', gain: 0.2, slideTo: 90, delayMs: 4 })
 }
 
 /** ボーナス図柄が揃った時のファンファーレ */
