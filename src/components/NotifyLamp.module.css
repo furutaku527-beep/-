@@ -1,161 +1,79 @@
 .wrap {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  width: 128px;
 }
 
-/* 点灯時に背後で回転する光条 */
-.rays {
+/* 消灯状態（常に描画しておき、点灯画像を上に重ねる） */
+.off {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 点灯状態：実機同様、点いたら消えない。点灯の瞬間だけ僅かに弾む */
+.on {
   position: absolute;
-  top: -14px;
-  width: 116px;
-  height: 116px;
-  border-radius: 50%;
-  background: repeating-conic-gradient(
-    rgba(255, 210, 63, 0.5) 0deg 12deg,
-    transparent 12deg 30deg
-  );
-  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 30%, transparent 70%);
-  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 30%, transparent 70%);
-  animation: raySpin 3.2s linear infinite;
+  inset: 0;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+  will-change: opacity, transform;
   pointer-events: none;
 }
 
-@keyframes raySpin {
-  to {
-    transform: rotate(360deg);
+.lit {
+  opacity: 1;
+  animation: peka 0.45s ease-out;
+}
+
+/* ペカッ：一瞬で点灯し、わずかに膨らんで戻る */
+@keyframes peka {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  45% {
+    transform: scale(0.99);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
-/* ガラスドーム */
-.lamp {
-  position: relative;
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.35), transparent 42%),
-    radial-gradient(circle at 50% 55%, #34305e, #17152e 75%);
-  box-shadow:
-    0 0 0 3px #3a3745,
-    0 0 0 6px #b9b9c8,
-    0 0 0 7px #55525e,
-    0 6px 12px rgba(0, 0, 0, 0.6),
-    inset 0 -8px 14px rgba(0, 0, 0, 0.55),
-    inset 0 4px 6px rgba(255, 255, 255, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-/*
- * 点灯時の光暈。box-shadow を毎フレーム再計算するとメインスレッドが重くなり
- * リールの requestAnimationFrame がコマ落ちして「速度が変わって見える」ため、
- * 光は opacity / transform だけで動かす合成専用アニメーションにする。
- */
-.lamp::before {
-  content: '';
-  position: absolute;
-  inset: -22px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 200, 60, 0.95) 0%, rgba(255, 200, 60, 0) 68%);
-  opacity: 0;
-  transform: scale(0.8);
-  pointer-events: none;
-  z-index: -1;
-  will-change: opacity, transform;
-}
-
-/* ドームのハイライト */
-.lamp::after {
-  content: '';
-  position: absolute;
-  top: 8%;
-  left: 16%;
-  width: 46%;
-  height: 30%;
-  border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
-  transform: rotate(-18deg);
-  pointer-events: none;
-}
-
-.face {
-  font-size: 40px;
-  color: #443f78;
-  transition: color 0.2s;
-}
-
-.on {
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), transparent 44%),
-    radial-gradient(circle at 50% 58%, #fff6c9 0%, #ffd23f 45%, #f08c00 100%);
-}
-
-.on::before {
-  animation: halo 0.85s ease-in-out infinite;
-}
-
-.on .face {
-  color: #a34e00;
-  animation: wobble 0.85s ease-in-out infinite;
-}
-
-/* レインボーは背景を作り直さず hue-rotate で色相だけ回す（合成寄りで軽い） */
+/* プレミアム：色相が回るレインボー発光（合成のみで軽い） */
 .rainbow {
-  background:
-    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), transparent 44%),
-    radial-gradient(circle at 50% 58%, #fff 0%, #ff4d4d 55%, #d81b60 100%);
-  animation: hueSpin 1.3s linear infinite;
-  will-change: filter;
+  animation: peka 0.45s ease-out, lampHue 1.4s linear 0.45s infinite;
 }
 
-.rainbow::before {
-  background: radial-gradient(circle, rgba(255, 120, 200, 0.95) 0%, rgba(255, 120, 200, 0) 68%);
-  animation: halo 0.6s ease-in-out infinite;
+@keyframes lampHue {
+  to {
+    filter: hue-rotate(360deg);
+  }
 }
 
-.rainbow .face {
-  color: #fff;
-  animation: wobble 0.5s ease-in-out infinite;
+/* 背後の光暈。opacity/transformだけでゆっくり呼吸させる */
+.halo {
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(130, 150, 255, 0.6) 0%, rgba(130, 150, 255, 0) 65%);
+  pointer-events: none;
+  will-change: opacity, transform;
+  animation: haloBreath 1.7s ease-in-out infinite;
 }
 
-.label {
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: #8b86b8;
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-}
-
-/* 合成専用（opacity + transform）の光暈パルス */
-@keyframes halo {
+@keyframes haloBreath {
   0%,
   100% {
     opacity: 0.5;
-    transform: scale(0.9);
+    transform: scale(0.95);
   }
   50% {
     opacity: 1;
-    transform: scale(1.18);
-  }
-}
-
-@keyframes wobble {
-  0%,
-  100% {
-    transform: rotate(-12deg) scale(1);
-  }
-  50% {
-    transform: rotate(12deg) scale(1.18);
-  }
-}
-
-@keyframes hueSpin {
-  to {
-    filter: hue-rotate(360deg);
+    transform: scale(1.06);
   }
 }
