@@ -396,6 +396,7 @@ function settle(set: Set, get: Get): void {
     const left = s.bonusGamesLeft - 1
     if (left <= 0) {
       sfx.stopBonusBgm()
+      sfx.playBonusEnd()
       set({
         inBonus: null,
         bonusGamesLeft: 0,
@@ -425,8 +426,8 @@ function settle(set: Set, get: Get): void {
       const kind = s.pendingBonus
       stats.addBonus(kind, s.premium)
       stats.addGame(0, gameBet) // 揃えたゲーム自体の投入
-      sfx.playFanfare()
-      sfx.startBonusBgm()
+      sfx.playFanfare(kind)
+      sfx.startBonusBgm(kind)
       set({
         pendingBonus: null,
         inBonus: kind,
@@ -492,10 +493,8 @@ function settle(set: Set, get: Get): void {
 
   stats.addGame(payout, gameBet)
   if (payout > 0) {
-    if (role === 'GRAPE') sfx.playWin()
-    else if (role === 'CHERRY') sfx.playCherry()
-    else if (role === 'BELL') sfx.playBell()
-    else if (role === 'CLOWN') sfx.playClown()
+    // 実機同様、小役固有のメロディはなく払い出し枚数分の「ピロピロ」だけ鳴る
+    sfx.playPayout(payout)
     set({ credits: s.credits + payout, lastPayout: payout, winCells })
   } else {
     set({ winCells: [] })
