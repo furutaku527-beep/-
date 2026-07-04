@@ -202,6 +202,43 @@ describe('停止制御（5ライン）', () => {
     const idx = stopAll([1, 1, 1], noFlag, 'BIG', [0, 1, 2], 1)
     expect(checkBonusAligned(idx, 'BIG', 1)).toBe(true)
   })
+
+  it('チェリーは引き込み最優先：どの押し順でも届く押し位置なら必ず表示される', () => {
+    const flag: Flag = { role: 'CHERRY', midCherry: false }
+    // 左リールで角チェリーを物理的に表示できる押し位置
+    const physCatch = (p: number) => {
+      for (let slip = 0; slip <= 4; slip++) {
+        const c = (p - slip + STRIP_LENGTH) % STRIP_LENGTH
+        if (symbolAt(0, c - 1) === 'CHERRY' || symbolAt(0, c + 1) === 'CHERRY') return true
+      }
+      return false
+    }
+    const orders = [
+      [0, 1, 2],
+      [1, 2, 0],
+      [2, 1, 0],
+      [1, 0, 2],
+    ]
+    for (const order of orders) {
+      for (let c0 = 0; c0 < STRIP_LENGTH; c0++) {
+        for (let c1 = 0; c1 < STRIP_LENGTH; c1 += 3) {
+          for (let c2 = 0; c2 < STRIP_LENGTH; c2 += 3) {
+            const idx = stopAll([c0, c1, c2], flag, null, order)
+            const win = windowSymbols(0, idx[0])
+            // 他役は絶対に揃わない・中段チェリー（プレミア表示）にもならない
+            expect(findWins(idx)).toHaveLength(0)
+            expect(win[1]).not.toBe('CHERRY')
+            // 届く押し位置なら必ず角チェリーが表示される（実機の引き込み最優先）
+            if (physCatch(c0)) {
+              expect(win).toContain('CHERRY')
+            } else {
+              expect(win).not.toContain('CHERRY')
+            }
+          }
+        }
+      }
+    }
+  })
 })
 
 describe('ライン判定', () => {

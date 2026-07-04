@@ -88,7 +88,7 @@ export function Controls() {
                 key={i}
                 className={styles.stopBtn}
                 disabled={!reels[i].spinning || auto}
-                onPointerDown={() => stopReel(i)}
+                onPointerDown={(e) => stopReel(i, e.timeStamp)}
               >
                 STOP
               </button>

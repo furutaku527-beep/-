@@ -80,7 +80,11 @@ interface GameState {
   bet1: () => void
   /** レバーON */
   startSpin: () => void
-  stopReel: (i: number) => void
+  /**
+   * リール停止。at にはポインタイベントの timeStamp を渡すと、
+   * JS処理遅延の影響を受けない「実際に押した瞬間」で押下位置を判定する。
+   */
+  stopReel: (i: number, at?: number) => void
   setSetting: (level: SettingLevel) => void
   setAuto: (auto: boolean) => void
   setReelSpeed: (pct: number) => void
@@ -94,10 +98,19 @@ interface GameState {
  * 実機同様、図柄は上から下へ流れる＝indexは回転で減っていく。
  * round で視覚上の中段に最も近いコマを取る（floorだと見た目より最大1コマ遅れる）。
  */
-function currentIndex(baseIndex: number, spinStartAt: number, koma: number): number {
-  const elapsed = Date.now() - spinStartAt
-  const advanced = Math.round(elapsed / koma)
+function currentIndex(baseIndex: number, elapsed: number, koma: number): number {
+  const advanced = Math.round(Math.max(0, elapsed) / koma)
   return (((baseIndex - advanced) % STRIP_LENGTH) + STRIP_LENGTH) % STRIP_LENGTH
+}
+
+/**
+ * ポインタイベントの timeStamp を performance クロックに正規化する。
+ * （古いブラウザは epoch 基準の timeStamp を返すことがある）
+ */
+function normalizePressAt(at?: number): number {
+  if (at === undefined) return performance.now()
+  if (at > 1e11) return at - (Date.now() - performance.now())
+  return at
 }
 
 /** リール速度(%)から実効の1コマあたりミリ秒を求める（%が小さいほど遅い＝大きいkoma） */
@@ -190,12 +203,13 @@ export const useGameStore = create<GameState>()(
         doStart(set, get)
       },
 
-      stopReel: (i) => {
+      stopReel: (i, at) => {
         const s = get()
         if (!s.reels[i].spinning || !s.flag || s.settling) return
 
         const koma = s.spinKoma
-        const cur = currentIndex(s.reels[i].index, s.spinStartAt, koma)
+        // 実際に押した瞬間（イベント時刻）で押下コマを判定する
+        const cur = currentIndex(s.reels[i].index, normalizePressAt(at) - s.spinStartAt, koma)
         const stoppedIdx: (number | null)[] = s.reels.map((r, j) =>
           r.spinning || j === i ? null : r.index,
         )
@@ -330,7 +344,8 @@ function doStart(set: Set, get: Get): void {
 
   if (flag.midCherry) message = '中段チェリー!?'
 
-  lastReelStartAt = Date.now()
+  lastReelStartAt = Date.now() // 4.1秒ウェイト計算用（壁時計）
+  const startPerf = performance.now() // 押下判定・描画用（単調クロック）
   sfx.playReelStart()
 
   set({
@@ -343,7 +358,7 @@ function doStart(set: Set, get: Get): void {
       { spinning: true, index: s.reels[1].index },
       { spinning: true, index: s.reels[2].index },
     ],
-    spinStartAt: lastReelStartAt,
+    spinStartAt: startPerf,
     spinKoma: komaMsFor(s.reelSpeedPct),
     flag,
     pendingBonus,
