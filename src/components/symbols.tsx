@@ -35,17 +35,18 @@ interface SlotSymbolProps {
 }
 
 /**
- * 図柄ごとの表示ボックス。実機同様、7とBARはコマいっぱいに大きく表示して
- * 目押しの目印にし、小役図柄はふた回り小さくする。
+ * 図柄ごとの表示ボックス。実機同様、7とBARはコマ幅いっぱいに大きく表示して
+ * 目押しの目印にし、小役図柄はひと回り小さくする。
+ * 画像は自然な縦横比で書き出してあり、objectFit:contain で収める。
  */
 const SYMBOL_BOX: Record<Symbol, { w: number; h: number }> = {
-  STAR: { w: 78, h: 64 },
-  BAR: { w: 78, h: 64 },
-  GRAPE: { w: 40, h: 40 },
-  CHERRY: { w: 40, h: 40 },
-  BELL: { w: 40, h: 40 },
-  CLOWN: { w: 40, h: 40 },
-  REPLAY: { w: 40, h: 40 },
+  STAR: { w: 80, h: 60 },
+  BAR: { w: 80, h: 58 },
+  GRAPE: { w: 48, h: 46 },
+  CHERRY: { w: 48, h: 46 },
+  BELL: { w: 48, h: 46 },
+  CLOWN: { w: 48, h: 46 },
+  REPLAY: { w: 48, h: 46 },
 }
 
 /** リール図柄1つを描画する */
