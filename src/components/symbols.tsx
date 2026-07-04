@@ -35,30 +35,30 @@ interface SlotSymbolProps {
 }
 
 /**
- * 図柄ごとの表示サイズ。実機同様、7とBARは大きく目立たせて
- * 目押しの目印にし、小役図柄は一回り小さくする。
+ * 図柄ごとの表示ボックス。実機同様、7とBARはコマいっぱいに大きく表示して
+ * 目押しの目印にし、小役図柄はふた回り小さくする。
  */
-const SYMBOL_SIZE: Record<Symbol, number> = {
-  STAR: 62,
-  BAR: 62,
-  GRAPE: 46,
-  CHERRY: 46,
-  BELL: 46,
-  CLOWN: 46,
-  REPLAY: 46,
+const SYMBOL_BOX: Record<Symbol, { w: number; h: number }> = {
+  STAR: { w: 78, h: 64 },
+  BAR: { w: 78, h: 64 },
+  GRAPE: { w: 40, h: 40 },
+  CHERRY: { w: 40, h: 40 },
+  BELL: { w: 40, h: 40 },
+  CLOWN: { w: 40, h: 40 },
+  REPLAY: { w: 40, h: 40 },
 }
 
 /** リール図柄1つを描画する */
 export function SlotSymbol({ symbol, size }: SlotSymbolProps) {
-  const s = size ?? SYMBOL_SIZE[symbol]
+  const box = size ? { w: size, h: size } : SYMBOL_BOX[symbol]
   return (
     <img
       src={SYMBOL_ART[symbol]}
-      width={s}
-      height={s}
+      width={box.w}
+      height={box.h}
       alt={symbol}
       draggable={false}
-      style={{ display: 'block' }}
+      style={{ display: 'block', objectFit: 'contain' }}
     />
   )
 }

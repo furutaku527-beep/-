@@ -4,6 +4,7 @@ import styles from './StatusLamps.module.css'
 /** 実機の下パネル風ステータスランプ（BET・リプレイ・ウェイト・スタート） */
 export function StatusLamps() {
   const betPlaced = useGameStore((s) => s.betPlaced)
+  const bet = useGameStore((s) => s.bet)
   const waiting = useGameStore((s) => s.waiting)
   const replayNext = useGameStore((s) => s.replayNext)
   const anySpinning = useGameStore((s) => s.reels.some((r) => r.spinning))
@@ -16,7 +17,7 @@ export function StatusLamps() {
     <div className={styles.row}>
       <div className={styles.betGroup}>
         {[1, 2, 3].map((n) => (
-          <span key={n} className={`${styles.betDot} ${betLit ? styles.lit : ''}`}>
+          <span key={n} className={`${styles.betDot} ${betLit && n <= bet ? styles.lit : ''}`}>
             {n}
           </span>
         ))}

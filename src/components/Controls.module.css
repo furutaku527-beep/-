@@ -58,6 +58,39 @@
     0 6px 10px rgba(0, 0, 0, 0.4);
 }
 
+/* 1枚がけボタン（ペカ後にボーナスを揃える用） */
+.bet1Btn {
+  width: 72px;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #3a1c00;
+  background: linear-gradient(180deg, #ffe9b0, #f7c14f 55%, #d99a10);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px #3a3745,
+    0 0 0 3px #cfa93c,
+    0 3px 0 #8a5c00,
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.7);
+  transition: transform 0.06s;
+}
+
+.bet1Btn:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.bet1Btn:disabled {
+  background: linear-gradient(180deg, #55525e, #38353f);
+  color: #77737f;
+  box-shadow:
+    0 0 0 2px #3a3745,
+    0 0 0 3px #6d6a78,
+    0 3px 0 #232028,
+    0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
 /* スロットレバー */
 .lever {
   position: relative;

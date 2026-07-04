@@ -117,9 +117,10 @@ function noise(durationMs: number, opts: NoiseOpts = {}): void {
   src.stop(t1 + 0.05)
 }
 
-/** メダル投入音（3枚分の金属クリック） */
-export function playBet(): void {
-  for (let i = 0; i < 3; i++) {
+/** メダル投入音（枚数分の金属クリック） */
+export function playBet(count = 3): void {
+  const n = Math.max(1, Math.min(3, count))
+  for (let i = 0; i < n; i++) {
     noise(18, { filter: 'highpass', freq: 5000, gain: 0.05, delayMs: i * 65 })
     tone(2300 + i * 180, 25, { type: 'sine', gain: 0.05, delayMs: i * 65 })
   }
