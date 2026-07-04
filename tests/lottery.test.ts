@@ -19,8 +19,8 @@ describe('確率テーブル', () => {
 })
 
 describe('配当', () => {
-  it('BIGの純増は240枚', () => {
-    expect(bonusNetGain('BIG')).toBe(240)
+  it('BIGの純増は252枚（アイム相当）', () => {
+    expect(bonusNetGain('BIG')).toBe(252)
   })
   it('REGの純増は96枚', () => {
     expect(bonusNetGain('REG')).toBe(96)

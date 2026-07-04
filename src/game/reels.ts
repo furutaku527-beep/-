@@ -7,22 +7,25 @@ export const STRIP_LENGTH = 21
 export const MAX_SLIP = 4
 
 /**
- * リール配列（左・中・右）。実機（ゴーゴージャグラー系）の配列構造を再現。
+ * リール配列（左・中・右）。実機アイムジャグラーの公表配列をそのまま転記。
  *
  * - 実機同様、図柄は表示窓を上から下へ流れる（＝回転中は中段のindexが減っていく）。
  *   すべりで引き込まれるのは「窓より上にある＝indexが小さい側」の図柄。
- * - 左リールは「チェリー付BAR」（コマ④・⑮相当＝index 3・14、チェリーが直上）。
- *   BARを狙えばチェリーとボーナス図柄（7=STAR）を同時にフォローできる。
- * - 右リールは7（STAR）の直下にBAR。逆押し7狙いでREG用BARもフォローできる。
- * - 配列は scripts/search-strips.mjs で全押し位置・全押し順を検証して設計。
+ * - 配列表のコマ番号（①下〜㉑上）との対応は index = 21 − 番号。
+ * - 左リールは「チェリー付BAR」（⑮BARの下⑭にチェリー／④BARの上⑤にチェリー）。
+ *   BAR狙いでチェリーと7を同時にフォローできる。
+ * - 右リールはBARが1つだけ（7の直下）。チェリーは右リールに無い（実機同様）。
  */
 export const STRIPS: [Symbol[], Symbol[], Symbol[]] = [
-  // 左リール（BAR: 3,14 ／ チェリー: 2,13 ＝チェリー付BAR ／ 7: 10,20）
-  ['GRAPE', 'REPLAY', 'CHERRY', 'BAR', 'REPLAY', 'GRAPE', 'REPLAY', 'BELL', 'GRAPE', 'CLOWN', 'STAR', 'REPLAY', 'GRAPE', 'CHERRY', 'BAR', 'GRAPE', 'REPLAY', 'GRAPE', 'GRAPE', 'REPLAY', 'STAR'],
-  // 中リール（7: 11 のみ＝ボーナスは中リールの目押しが肝。7の直下にBAR）
-  ['BAR', 'GRAPE', 'GRAPE', 'REPLAY', 'GRAPE', 'GRAPE', 'REPLAY', 'CHERRY', 'REPLAY', 'REPLAY', 'GRAPE', 'STAR', 'BAR', 'GRAPE', 'REPLAY', 'CHERRY', 'BELL', 'CLOWN', 'GRAPE', 'REPLAY', 'REPLAY'],
-  // 右リール（7: 5,18 ／ BAR: 6,19＝7の直下。逆押し7狙いでREGフォロー可）
-  ['GRAPE', 'REPLAY', 'REPLAY', 'GRAPE', 'REPLAY', 'STAR', 'BAR', 'GRAPE', 'REPLAY', 'CLOWN', 'GRAPE', 'CHERRY', 'GRAPE', 'REPLAY', 'GRAPE', 'BELL', 'GRAPE', 'REPLAY', 'STAR', 'BAR', 'GRAPE'],
+  // 左リール（㉑ベル ⑳7 ⑲リプ ⑱ぶどう ⑰リプ ⑯ぶどう ⑮BAR ⑭チェリー ⑬ぶどう
+  //          ⑫リプ ⑪ぶどう ⑩7 ⑨ピエロ ⑧ぶどう ⑦リプ ⑥ぶどう ⑤チェリー ④BAR ③ぶどう ②リプ ①ぶどう）
+  ['BELL', 'STAR', 'REPLAY', 'GRAPE', 'REPLAY', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'REPLAY', 'GRAPE', 'STAR', 'CLOWN', 'GRAPE', 'REPLAY', 'GRAPE', 'CHERRY', 'BAR', 'GRAPE', 'REPLAY', 'GRAPE'],
+  // 中リール（㉑リプ ⑳7 ⑲ぶどう ⑱チェリー ⑰リプ ⑯ベル ⑮ぶどう ⑭チェリー ⑬リプ
+  //          ⑫BAR ⑪ぶどう ⑩チェリー ⑨リプ ⑧ベル ⑦ぶどう ⑥チェリー ⑤リプ ④BAR ③ぶどう ②チェリー ①ピエロ）
+  ['REPLAY', 'STAR', 'GRAPE', 'CHERRY', 'REPLAY', 'BELL', 'GRAPE', 'CHERRY', 'REPLAY', 'BAR', 'GRAPE', 'CHERRY', 'REPLAY', 'BELL', 'GRAPE', 'CHERRY', 'REPLAY', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN'],
+  // 右リール（㉑ぶどう ⑳7 ⑲BAR ⑱ベル ⑰リプ ⑯ぶどう ⑮ピエロ ⑭ベル ⑬リプ
+  //          ⑫ぶどう ⑪ピエロ ⑩ベル ⑨リプ ⑧ぶどう ⑦ピエロ ⑥ベル ⑤リプ ④ぶどう ③ピエロ ②ベル ①リプ）
+  ['GRAPE', 'STAR', 'BAR', 'BELL', 'REPLAY', 'GRAPE', 'CLOWN', 'BELL', 'REPLAY', 'GRAPE', 'CLOWN', 'BELL', 'REPLAY', 'GRAPE', 'CLOWN', 'BELL', 'REPLAY', 'GRAPE', 'CLOWN', 'BELL', 'REPLAY'],
 ]
 
 /** 図柄の表示用絵文字（データ表示などで使用） */
@@ -130,12 +133,16 @@ function leftCenterCherry(i0: number): boolean {
   return symbolAt(0, i0) === 'CHERRY'
 }
 
-/** 出目の全ライン成立役（BAR揃い等も含む生の判定） */
+/**
+ * 出目のライン成立役のうち払い出しに関わるもの。
+ * BAR揃い・チェリー揃いは役ではないため除外する
+ * （実機でもBAR揃いはガセ目としてハズレ時に普通に停止する）。
+ */
 function rawResults(i0: number, i1: number, i2: number): LineResult[] {
   const out: LineResult[] = []
   for (const l of LINES) {
     const r = evalLine([symbolAt(0, i0 + l[0]), symbolAt(1, i1 + l[1]), symbolAt(2, i2 + l[2])])
-    if (r !== null) out.push(r)
+    if (r !== null && r !== 'BAR' && r !== 'CHERRY') out.push(r)
   }
   return out
 }

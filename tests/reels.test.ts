@@ -33,20 +33,20 @@ describe('リール配列', () => {
     for (const strip of STRIPS) expect(strip).toHaveLength(STRIP_LENGTH)
   })
 
-  it('左リールはチェリー付BAR（チェリーがBARの直上）', () => {
+  it('左リールはチェリー付BAR（各BARにチェリーが隣接）', () => {
     const bars = STRIPS[0].flatMap((s, i) => (s === 'BAR' ? [i] : []))
     expect(bars.length).toBe(2)
     for (const b of bars) {
-      expect(symbolAt(0, b - 1)).toBe('CHERRY')
+      const adj = [symbolAt(0, b - 1), symbolAt(0, b + 1)]
+      expect(adj).toContain('CHERRY')
     }
   })
 
-  it('右リールは7の直下にBAR（逆押しでREGフォロー可能）', () => {
-    const stars = STRIPS[2].flatMap((s, i) => (s === 'STAR' ? [i] : []))
-    expect(stars.length).toBeGreaterThan(0)
-    for (const st of stars) {
-      expect(symbolAt(2, st + 1)).toBe('BAR')
-    }
+  it('右リールはBARが1つだけで7の直下（実機アイム同様）・チェリーなし', () => {
+    const bars = STRIPS[2].flatMap((s, i) => (s === 'BAR' ? [i] : []))
+    expect(bars).toHaveLength(1)
+    expect(symbolAt(2, bars[0] - 1)).toBe('STAR')
+    expect(STRIPS[2]).not.toContain('CHERRY')
   })
 
   it('ボーナス図柄（STAR）は引き込めない位置がある（目押し要素）', () => {
@@ -128,11 +128,11 @@ describe('停止制御（5ライン）', () => {
     }
   })
 
-  it('左リールBAR狙いでチェリーが角に止まる（±1コマの押しズレ込み）', () => {
+  it('左リールBAR狙いでチェリーが角に止まる（ビタ〜1コマ早押し）', () => {
     const flag: Flag = { role: 'CHERRY', midCherry: false }
     const bars = STRIPS[0].flatMap((s, i) => (s === 'BAR' ? [i] : []))
     for (const bar of bars) {
-      for (const d of [-1, 0, 1]) {
+      for (const d of [0, 1]) {
         const cur = (bar + d + STRIP_LENGTH) % STRIP_LENGTH
         const idx = resolveStop(0, cur, flag, null, [null, null, null])
         const win = windowSymbols(0, idx)
@@ -143,30 +143,28 @@ describe('停止制御（5ライン）', () => {
     }
   })
 
-  it('中段チェリー成立時はBAR狙いで左リール中段にチェリーが止まる', () => {
+  it('中段チェリー成立時は④BAR狙いで左リール中段にチェリーが止まる', () => {
     const flag: Flag = { role: 'BIG', midCherry: true }
-    const bars = STRIPS[0].flatMap((s, i) => (s === 'BAR' ? [i] : []))
-    for (const bar of bars) {
-      const idx = resolveStop(0, bar, flag, 'BIG', [null, null, null])
-      expect(symbolAt(0, idx)).toBe('CHERRY')
-    }
+    // ④BAR = index 17（チェリーが直上の⑤=index16）
+    const idx = resolveStop(0, 17, flag, 'BIG', [null, null, null])
+    expect(symbolAt(0, idx)).toBe('CHERRY')
   })
 
   it('BIG成立中：目押しすればBIGが揃い、checkBonusAlignedが検出する', () => {
-    // 左BAR狙い(3)→中リール7ビタ(11)→右リール7ビタ(5)
-    const idx = stopAll([3, 11, 5], noFlag, 'BIG')
+    // 各リール⑳の7をビタ押し（index 1）
+    const idx = stopAll([1, 1, 1], noFlag, 'BIG')
     expect(checkBonusAligned(idx, 'BIG')).toBe(true)
     expect(checkBonusAligned(idx, 'REG')).toBe(false)
   })
 
   it('REG成立中：右リールにBARを引き込んでREGが揃う', () => {
-    const idx = stopAll([3, 11, 6], noFlag, 'REG')
+    const idx = stopAll([1, 1, 2], noFlag, 'REG')
     expect(checkBonusAligned(idx, 'REG')).toBe(true)
   })
 
   it('ボーナス成立中でも目押しが外れれば揃わない（取りこぼし）', () => {
-    // 中リールの7(11)から遠い位置で押す
-    const idx = stopAll([3, 4, 12], noFlag, 'BIG')
+    // 中リールの7(index 1)から遠い位置で押す
+    const idx = stopAll([6, 10, 10], noFlag, 'BIG')
     expect(checkBonusAligned(idx, 'BIG')).toBe(false)
     // ハズレ表示にもならない
     expect(findWins(idx)).toHaveLength(0)
