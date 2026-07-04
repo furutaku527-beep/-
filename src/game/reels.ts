@@ -377,6 +377,164 @@ function greedyPull(
   return null
 }
 
+// ---------------------------------------------------------------------------
+// チェリーフラグ専用テーブル（実機の「成立役引き込み最優先」の再現）
+//
+// 左リールが物理的に角チェリーを表示できる押し位置で押された場合、
+// どの押し順でも必ず表示できることを保証する。そのため中・右リールは
+// 「左のチェリー表示可能性を壊さない」位置にだけ止める。
+// ---------------------------------------------------------------------------
+
+interface CherryTables {
+  /** okC[(s*21+b)*21+c]: 角チェリー表示＋全ライン無成立 */
+  okC: Uint8Array
+  /** okQ: チェリー中段以外＋全ライン無成立（表示なし側の合法形） */
+  okQ: Uint8Array
+  /** pair0[b*21+c]: 中・右停止済みで左が未停止。どこを押されても左が合法に止まれるか */
+  pair0: Uint8Array
+  /** pair1[s*21+c]: 左・右停止済みで中が未停止 */
+  pair1: Uint8Array
+  /** pair2[s*21+b]: 左・中停止済みで右が未停止 */
+  pair2: Uint8Array
+  single: [Uint8Array, Uint8Array, Uint8Array]
+  /** 角チェリーを表示できる左停止位置 */
+  corner: Uint8Array
+  /** physCatch[p]: 押し位置pから角チェリー表示が物理的に可能か */
+  phys: Uint8Array
+  root: boolean
+}
+
+let cherryCache: CherryTables | null = null
+
+function cherryTables(): CherryTables {
+  if (cherryCache) return cherryCache
+  const lines = LINES
+  const quiet3 = (s: number, b: number, c: number) => rawResults(lines, s, b, c).length === 0
+  const corner = new Uint8Array(L)
+  for (let s = 0; s < L; s++) corner[s] = leftWindowCherry(s) && !leftCenterCherry(s) ? 1 : 0
+  const phys = new Uint8Array(L)
+  for (let p = 0; p < L; p++) {
+    for (let slip = 0; slip <= MAX_SLIP; slip++) if (corner[norm(p - slip)]) phys[p] = 1
+  }
+
+  const okC = new Uint8Array(L * L * L)
+  const okQ = new Uint8Array(L * L * L)
+  for (let s = 0; s < L; s++) {
+    const isCorner = corner[s] === 1
+    const isCenter = leftCenterCherry(s)
+    for (let b = 0; b < L; b++) {
+      for (let c = 0; c < L; c++) {
+        const q = quiet3(s, b, c) ? 1 : 0
+        okC[(s * L + b) * L + c] = isCorner ? q : 0
+        okQ[(s * L + b) * L + c] = !isCenter ? q : 0
+      }
+    }
+  }
+
+  const good = new Uint8Array(L)
+  // pair1: 左s・右c停止済み → 中はどこを押されても静かに止まれるか
+  const pair1 = new Uint8Array(L * L)
+  // pair2: 左s・中b停止済み → 右はどこを押されても静かに止まれるか
+  const pair2 = new Uint8Array(L * L)
+  for (let s = 0; s < L; s++) {
+    for (let x = 0; x < L; x++) {
+      for (let m = 0; m < L; m++) good[m] = okQ[(s * L + m) * L + x]
+      pair1[s * L + x] = coveredByWindows(good) ? 1 : 0
+      for (let r = 0; r < L; r++) good[r] = okQ[(s * L + x) * L + r]
+      pair2[s * L + x] = coveredByWindows(good) ? 1 : 0
+    }
+  }
+  // pair0: 中b・右c停止済み → 左がどこを押されても、
+  //   表示可能な押し位置なら角チェリーを表示して、不可能なら非表示で止まれるか
+  const pair0 = new Uint8Array(L * L)
+  for (let b = 0; b < L; b++) {
+    for (let c = 0; c < L; c++) {
+      let ok = true
+      for (let p = 0; p < L && ok; p++) {
+        let found = false
+        for (let slip = 0; slip <= MAX_SLIP && !found; slip++) {
+          const s = norm(p - slip)
+          if (phys[p]) {
+            if (corner[s] && okC[(s * L + b) * L + c]) found = true
+          } else {
+            if (!leftWindowCherry(s) && okQ[(s * L + b) * L + c]) found = true
+          }
+        }
+        if (!found) ok = false
+      }
+      pair0[b * L + c] = ok ? 1 : 0
+    }
+  }
+
+  // single: 1リール停止時、残り2リールがどの順・どこを押されても守れるか
+  const single: [Uint8Array, Uint8Array, Uint8Array] = [
+    new Uint8Array(L),
+    new Uint8Array(L),
+    new Uint8Array(L),
+  ]
+  for (let s = 0; s < L; s++) {
+    if (leftCenterCherry(s)) continue
+    for (let m = 0; m < L; m++) good[m] = pair2[s * L + m]
+    const okMid = coveredByWindows(good)
+    for (let c = 0; c < L; c++) good[c] = pair1[s * L + c]
+    single[0][s] = okMid && coveredByWindows(good) ? 1 : 0
+  }
+  /** 左が未停止のとき、全押し位置で左が合法に止まれて after が守れるか */
+  const leftCoverable = (after: (s: number) => number): boolean => {
+    for (let p = 0; p < L; p++) {
+      let found = false
+      for (let slip = 0; slip <= MAX_SLIP && !found; slip++) {
+        const s = norm(p - slip)
+        if (phys[p]) {
+          if (corner[s] && after(s)) found = true
+        } else {
+          if (!leftWindowCherry(s) && after(s)) found = true
+        }
+      }
+      if (!found) return false
+    }
+    return true
+  }
+  for (let v = 0; v < L; v++) {
+    const leftOk1 = leftCoverable((s) => pair2[s * L + v])
+    for (let c = 0; c < L; c++) good[c] = pair0[v * L + c]
+    single[1][v] = leftOk1 && coveredByWindows(good) ? 1 : 0
+
+    const leftOk2 = leftCoverable((s) => pair1[s * L + v])
+    for (let b = 0; b < L; b++) good[b] = pair0[b * L + v]
+    single[2][v] = leftOk2 && coveredByWindows(good) ? 1 : 0
+  }
+
+  const root =
+    leftCoverable((s) => single[0][s] === 1 ? 1 : 0) &&
+    coveredByWindows(single[1]) &&
+    coveredByWindows(single[2])
+
+  cherryCache = { okC, okQ, pair0, pair1, pair2, single, corner, phys, root }
+  return cherryCache
+}
+
+/** チェリーフラグ時：この停止で以降も表示保証を守れるか */
+function cherryStateOK(
+  ct: CherryTables,
+  reel: number,
+  idx: number,
+  stopped: ReadonlyArray<number | null>,
+): boolean {
+  const t: (number | null)[] = [...stopped]
+  t[reel] = idx
+  const known = t.filter((v) => v !== null).length
+  if (known === 3) {
+    return ct.okQ[((t[0] as number) * L + (t[1] as number)) * L + (t[2] as number)] === 1
+  }
+  if (known === 2) {
+    if (t[0] === null) return ct.pair0[(t[1] as number) * L + (t[2] as number)] === 1
+    if (t[1] === null) return ct.pair1[(t[0] as number) * L + (t[2] as number)] === 1
+    return ct.pair2[(t[0] as number) * L + (t[1] as number)] === 1
+  }
+  return ct.single[reel][idx] === 1
+}
+
 /**
  * 停止制御。ビタ押し位置 cur に対し、内部フラグに応じた停止位置を返す。
  * stopped は各リールの停止index（未停止・自分自身は null）。
@@ -428,11 +586,29 @@ export function resolveStop(
       return tableStop('NONE', reel, cur, stopped, lines) ?? cur
     }
     case 'CHERRY': {
-      // チェリーは左リールの表示のみ。角優先、届かなければ取りこぼし。
+      // 成立役引き込み最優先（実機同様）：
+      // 左リールは届く押し位置なら押し順に関わらず必ず角チェリーを表示する。
+      // 中・右リールは左のチェリー表示可能性を壊さない位置にだけ止める。
       // 1枚がけは中段のみ有効なので角チェリーは狙わない
-      if (reel === 0 && bet >= 3) {
-        const hit = tableStop('CH_CORNER', reel, cur, stopped, lines)
-        if (hit !== null) return hit
+      if (bet >= 3) {
+        const ct = cherryTables()
+        if (reel === 0) {
+          // 第1候補：角チェリー表示
+          for (let slip = 0; slip <= MAX_SLIP; slip++) {
+            const idx = norm(cur - slip)
+            if (ct.corner[idx] && cherryStateOK(ct, 0, idx, stopped)) return idx
+          }
+          // 届かない押し位置：チェリーを見せずに取りこぼし
+          for (let slip = 0; slip <= MAX_SLIP; slip++) {
+            const idx = norm(cur - slip)
+            if (!leftWindowCherry(idx) && cherryStateOK(ct, 0, idx, stopped)) return idx
+          }
+        } else {
+          for (let slip = 0; slip <= MAX_SLIP; slip++) {
+            const idx = norm(cur - slip)
+            if (cherryStateOK(ct, reel, idx, stopped)) return idx
+          }
+        }
       }
       return tableStop('QUIET', reel, cur, stopped, lines) ?? cur
     }
@@ -456,5 +632,7 @@ export function verifyStripDesign(): Record<string, boolean> {
   for (const bet of [3, 1]) {
     for (const n of names) out[`${n}:${bet}bet`] = tables(n, activeLines(bet)).root
   }
+  // チェリー引き込み最優先の保証（全押し順・全押し位置でBAR狙いのチェリーを表示できるか）
+  out['CHERRY_PRIORITY'] = cherryTables().root
   return out
 }

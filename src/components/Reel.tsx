@@ -50,10 +50,10 @@ export function Reel({ reel }: Props) {
       // 等速回転。実機同様、図柄は上から下へ流れる。
       // requestAnimationFrame は表示の最大リフレッシュレート（120Hz対応端末なら
       // 120fps）で回り、位置は経過時刻から算出するのでfpsに依らず一定速度。
+      // spinStartAt は performance クロック基準（押下判定と同一時間軸）。
       const base = index
-      const loop = () => {
-        const elapsed = Date.now() - spinStartAt
-        apply(base - elapsed / koma)
+      const loop = (t: number) => {
+        apply(base - (t - spinStartAt) / koma)
         raf = requestAnimationFrame(loop)
       }
       raf = requestAnimationFrame(loop)
