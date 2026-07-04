@@ -133,8 +133,10 @@ export const useGameStore = create<GameState>()(
         const s = get()
         if (s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
         if (s.replayNext) return // リプレイは自動ベット済み
-        if (s.bet === BET) return
-        const need = BET - s.bet
+        // 投入済み枚数（前ゲームの bet の残り値は「投入済み」ではない）
+        const current = s.betPlaced ? s.bet : 0
+        if (current === BET) return
+        const need = BET - current
         if (s.credits < need) return
         sfx.unlockAudio()
         sfx.playBet(need)
@@ -146,8 +148,9 @@ export const useGameStore = create<GameState>()(
         if (s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
         if (s.replayNext) return // リプレイは自動ベット済み
         if (s.inBonus) return // ボーナス中は3枚がけのみ
-        if (s.bet === 1) return
-        const delta = 1 - s.bet // MAX BET後なら -2（2枚払い戻し）
+        const current = s.betPlaced ? s.bet : 0
+        if (current === 1) return
+        const delta = 1 - current // MAX BET後なら -2（2枚払い戻し）
         if (delta > 0 && s.credits < delta) return
         sfx.unlockAudio()
         sfx.playBet(1)
@@ -318,6 +321,8 @@ function doStart(set: Set, get: Get): void {
   set({
     waiting: false,
     betPlaced: false,
+    // 旧バージョンの保存データ（betなし）から復帰した場合の正規化
+    bet: s.bet > 0 ? s.bet : BET,
     reels: [
       { spinning: true, index: s.reels[0].index },
       { spinning: true, index: s.reels[1].index },

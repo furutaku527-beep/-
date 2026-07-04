@@ -25,8 +25,10 @@ export function Controls() {
 
   const anySpinning = reels.some((r) => r.spinning)
   const betIdle = !anySpinning && !waiting && !settling && !replayNext
-  const canBetMax = betIdle && bet !== BET && credits >= BET - bet
-  const canBet1 = betIdle && bet !== 1 && !inBonus && credits >= Math.max(0, 1 - bet)
+  // 投入済み枚数（前ゲームのbet残り値は投入済みではない）
+  const current = betPlaced ? bet : 0
+  const canBetMax = betIdle && current !== BET && credits >= BET - current
+  const canBet1 = betIdle && current !== 1 && !inBonus && credits >= Math.max(0, 1 - current)
   const canLever = !anySpinning && !waiting && !settling && betPlaced
   const broke = !anySpinning && !betPlaced && !replayNext && !waiting && !settling && credits < BET
 
