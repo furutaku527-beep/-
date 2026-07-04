@@ -20,10 +20,11 @@ function stopAll(
   flag: Flag,
   pending: 'BIG' | 'REG' | null = null,
   order: number[] = [0, 1, 2],
+  bet = 3,
 ): [number, number, number] {
   const stopped: (number | null)[] = [null, null, null]
   for (const reel of order) {
-    stopped[reel] = resolveStop(reel, curs[reel], flag, pending, stopped)
+    stopped[reel] = resolveStop(reel, curs[reel], flag, pending, stopped, bet)
   }
   return stopped as [number, number, number]
 }
@@ -168,6 +169,38 @@ describe('停止制御（5ライン）', () => {
     expect(checkBonusAligned(idx, 'BIG')).toBe(false)
     // ハズレ表示にもならない
     expect(findWins(idx)).toHaveLength(0)
+  })
+
+  it('1枚がけ（中段のみ）でもぶどう・リプレイは取りこぼさない', () => {
+    for (const role of ['GRAPE', 'REPLAY'] as const) {
+      const flag: Flag = { role, midCherry: false }
+      for (let c0 = 0; c0 < STRIP_LENGTH; c0 += 2) {
+        for (let c1 = 0; c1 < STRIP_LENGTH; c1 += 2) {
+          for (let c2 = 0; c2 < STRIP_LENGTH; c2 += 2) {
+            const idx = stopAll([c0, c1, c2], flag, null, [0, 1, 2], 1)
+            const wins = findWins(idx, 1)
+            expect(wins.length).toBeGreaterThan(0)
+            expect(wins.every((w) => w.result === role)).toBe(true)
+          }
+        }
+      }
+    }
+  })
+
+  it('1枚がけのハズレは中段に何も揃わない', () => {
+    for (let c0 = 0; c0 < STRIP_LENGTH; c0 += 2) {
+      for (let c1 = 0; c1 < STRIP_LENGTH; c1 += 2) {
+        for (let c2 = 0; c2 < STRIP_LENGTH; c2 += 2) {
+          const idx = stopAll([c0, c1, c2], noFlag, null, [0, 1, 2], 1)
+          expect(findWins(idx, 1)).toHaveLength(0)
+        }
+      }
+    }
+  })
+
+  it('1枚がけでボーナスを狙えば中段に揃う', () => {
+    const idx = stopAll([1, 1, 1], noFlag, 'BIG', [0, 1, 2], 1)
+    expect(checkBonusAligned(idx, 'BIG', 1)).toBe(true)
   })
 })
 

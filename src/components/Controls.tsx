@@ -6,9 +6,11 @@ import styles from './Controls.module.css'
 export function Controls() {
   const reels = useGameStore((s) => s.reels)
   const betPlaced = useGameStore((s) => s.betPlaced)
+  const bet = useGameStore((s) => s.bet)
   const waiting = useGameStore((s) => s.waiting)
   const settling = useGameStore((s) => s.settling)
   const betMax = useGameStore((s) => s.betMax)
+  const bet1 = useGameStore((s) => s.bet1)
   const startSpin = useGameStore((s) => s.startSpin)
   const stopReel = useGameStore((s) => s.stopReel)
   const auto = useGameStore((s) => s.auto)
@@ -17,11 +19,14 @@ export function Controls() {
   const toggleMute = useGameStore((s) => s.toggleMute)
   const credits = useGameStore((s) => s.credits)
   const replayNext = useGameStore((s) => s.replayNext)
+  const inBonus = useGameStore((s) => s.inBonus)
   const addCredits = useGameStore((s) => s.addCredits)
   const [pulled, setPulled] = useState(false)
 
   const anySpinning = reels.some((r) => r.spinning)
-  const canBet = !anySpinning && !waiting && !settling && !betPlaced && !replayNext && credits >= BET
+  const betIdle = !anySpinning && !waiting && !settling && !replayNext
+  const canBetMax = betIdle && bet !== BET && credits >= BET - bet
+  const canBet1 = betIdle && bet !== 1 && !inBonus && credits >= Math.max(0, 1 - bet)
   const canLever = !anySpinning && !waiting && !settling && betPlaced
   const broke = !anySpinning && !betPlaced && !replayNext && !waiting && !settling && credits < BET
 
@@ -41,9 +46,12 @@ export function Controls() {
   return (
     <div className={styles.wrap}>
       <div className={styles.mainArea}>
-        {/* 左：MAX BET＋レバー（実機の配置） */}
+        {/* 左：1BET・MAX BET＋レバー（実機の配置） */}
         <div className={styles.leftCol}>
-          <button className={styles.betBtn} disabled={!canBet || auto} onClick={betMax}>
+          <button className={styles.bet1Btn} disabled={!canBet1 || auto} onClick={bet1}>
+            1 BET
+          </button>
+          <button className={styles.betBtn} disabled={!canBetMax || auto} onClick={betMax}>
             MAX
             <br />
             BET
@@ -68,7 +76,7 @@ export function Controls() {
                 key={i}
                 className={styles.stopBtn}
                 disabled={!reels[i].spinning || auto}
-                onClick={() => stopReel(i)}
+                onPointerDown={() => stopReel(i)}
               >
                 STOP
               </button>

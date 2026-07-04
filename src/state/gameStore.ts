@@ -41,6 +41,8 @@ interface GameState {
 
   /** メダル投入済み（レバーON可能） */
   betPlaced: boolean
+  /** 今ゲームの賭け枚数（1 or 3。3枚=5ライン、1枚=中段のみ） */
+  bet: number
   /** 4.1秒ウェイト消化待ち（レバーON済みでリール始動待ち） */
   waiting: boolean
   /** 第3リール停止後、すべり演出中で精算待ち */
@@ -70,6 +72,8 @@ interface GameState {
   winCells: [number, number][]
 
   betMax: () => void
+  /** 1枚がけ（MAX BET後に押した場合は差額を払い戻して1枚がけに変更） */
+  bet1: () => void
   /** レバーON */
   startSpin: () => void
   stopReel: (i: number) => void
@@ -104,6 +108,7 @@ export const useGameStore = create<GameState>()(
       muted: false,
       auto: false,
       betPlaced: false,
+      bet: 0,
       waiting: false,
       settling: false,
       reels: [
@@ -126,12 +131,27 @@ export const useGameStore = create<GameState>()(
 
       betMax: () => {
         const s = get()
-        if (s.betPlaced || s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
+        if (s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
         if (s.replayNext) return // リプレイは自動ベット済み
-        if (s.credits < BET) return
+        if (s.bet === BET) return
+        const need = BET - s.bet
+        if (s.credits < need) return
         sfx.unlockAudio()
-        sfx.playBet()
-        set({ credits: s.credits - BET, betPlaced: true, lastPayout: 0, message: '' })
+        sfx.playBet(need)
+        set({ credits: s.credits - need, bet: BET, betPlaced: true, lastPayout: 0, message: '' })
+      },
+
+      bet1: () => {
+        const s = get()
+        if (s.waiting || s.settling || s.reels.some((r) => r.spinning)) return
+        if (s.replayNext) return // リプレイは自動ベット済み
+        if (s.inBonus) return // ボーナス中は3枚がけのみ
+        if (s.bet === 1) return
+        const delta = 1 - s.bet // MAX BET後なら -2（2枚払い戻し）
+        if (delta > 0 && s.credits < delta) return
+        sfx.unlockAudio()
+        sfx.playBet(1)
+        set({ credits: s.credits - delta, bet: 1, betPlaced: true, lastPayout: 0, message: '' })
       },
 
       startSpin: () => {
@@ -167,9 +187,9 @@ export const useGameStore = create<GameState>()(
         let stopIndex: number
         if (s.inBonus) {
           // ボーナス消化中は毎ゲームぶどうを引き込む（演出）
-          stopIndex = resolveStop(i, cur, { role: 'GRAPE', midCherry: false }, null, stoppedIdx)
+          stopIndex = resolveStop(i, cur, { role: 'GRAPE', midCherry: false }, null, stoppedIdx, s.bet)
         } else {
-          stopIndex = resolveStop(i, cur, s.flag, s.pendingBonus, stoppedIdx)
+          stopIndex = resolveStop(i, cur, s.flag, s.pendingBonus, stoppedIdx, s.bet)
         }
 
         sfx.playStop()
@@ -216,6 +236,7 @@ export const useGameStore = create<GameState>()(
           credits: 500,
           auto: false,
           betPlaced: false,
+          bet: 0,
           waiting: false,
           settling: false,
           reels: [
@@ -244,6 +265,7 @@ export const useGameStore = create<GameState>()(
         setting: s.setting,
         muted: s.muted,
         betPlaced: s.betPlaced,
+        bet: s.bet,
         pendingBonus: s.pendingBonus,
         inBonus: s.inBonus,
         bonusGamesLeft: s.bonusGamesLeft,
@@ -321,12 +343,13 @@ function cellsForResult(wins: LineWin[], result: LineResult): [number, number][]
     .flatMap((w) => LINES[w.line].map((row, j) => [j, row] as [number, number]))
 }
 
-/** 全リール停止後の精算処理（5ラインの表示ベースで判定） */
+/** 全リール停止後の精算処理（賭け枚数に応じた有効ラインの表示ベースで判定） */
 function settle(set: Set, get: Get): void {
   const s = get()
   const stats = useStatsStore.getState()
   const idx3: [number, number, number] = [s.reels[0].index, s.reels[1].index, s.reels[2].index]
-  const wins = findWins(idx3)
+  const gameBet = s.bet > 0 ? s.bet : BET
+  const wins = findWins(idx3, gameBet)
 
   // --- ボーナス消化中 ---
   if (s.inBonus) {
@@ -362,10 +385,10 @@ function settle(set: Set, get: Get): void {
       if (s.premium) sfx.playPremium()
     }
 
-    if (checkBonusAligned(idx3, s.pendingBonus)) {
+    if (checkBonusAligned(idx3, s.pendingBonus, gameBet)) {
       const kind = s.pendingBonus
       stats.addBonus(kind, s.premium)
-      stats.addGame(0, BET) // 揃えたゲーム自体の投入
+      stats.addGame(0, gameBet) // 揃えたゲーム自体の投入
       sfx.playFanfare()
       sfx.startBonusBgm()
       set({
@@ -382,7 +405,7 @@ function settle(set: Set, get: Get): void {
       return
     }
 
-    stats.addGame(0, BET)
+    stats.addGame(0, gameBet)
     set({ lamp, message: lamp !== s.lamp ? 'ピカッ!' : s.message, winCells: [] })
     checkAchievements(get)
     maybeAuto(get)
@@ -413,8 +436,10 @@ function settle(set: Set, get: Get): void {
   let payout = 0
   let winCells: [number, number][] = []
   if (role === 'CHERRY') {
-    // チェリーは左リールの表示窓に止まった段だけ入賞（取りこぼしあり）
-    const rows = [-1, 0, 1].filter((r) => symbolAt(0, idx3[0] + r) === 'CHERRY')
+    // チェリーは左リールの有効ライン上に止まった段だけ入賞（取りこぼしあり）。
+    // 1枚がけは中段のみ有効
+    const activeRows = gameBet >= 3 ? [-1, 0, 1] : [0]
+    const rows = activeRows.filter((r) => symbolAt(0, idx3[0] + r) === 'CHERRY')
     if (rows.length > 0) {
       payout = smallPayout('CHERRY')
       winCells = rows.map((r) => [0, r] as [number, number])
@@ -429,7 +454,7 @@ function settle(set: Set, get: Get): void {
     }
   }
 
-  stats.addGame(payout, BET)
+  stats.addGame(payout, gameBet)
   if (payout > 0) {
     if (role === 'GRAPE') sfx.playWin()
     else if (role === 'CHERRY') sfx.playCherry()

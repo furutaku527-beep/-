@@ -51,6 +51,13 @@ export const LINES: ReadonlyArray<readonly [number, number, number]> = [
   [1, 0, -1], // 右上がり
 ]
 
+type LineSet = ReadonlyArray<readonly [number, number, number]>
+
+/** 賭け枚数に応じた有効ライン（3枚=5ライン、1枚=中段のみ） */
+export function activeLines(bet: number): LineSet {
+  return bet >= 3 ? LINES : LINES.slice(0, 1)
+}
+
 const L = STRIP_LENGTH
 const norm = (i: number): number => ((i % L) + L) % L
 
@@ -92,9 +99,9 @@ export interface LineWin {
 }
 
 /** 全停止後の表示上の成立ライン一覧（BAR揃い・チェリー揃いは役ではないので除外） */
-export function findWins(stopped: readonly [number, number, number]): LineWin[] {
+export function findWins(stopped: readonly [number, number, number], bet = 3): LineWin[] {
   const wins: LineWin[] = []
-  LINES.forEach((l, i) => {
+  activeLines(bet).forEach((l, i) => {
     const r = evalLine(lineSymbols(stopped, l))
     if (r !== null && r !== 'BAR' && r !== 'CHERRY') wins.push({ line: i, result: r })
   })
@@ -102,8 +109,12 @@ export function findWins(stopped: readonly [number, number, number]): LineWin[] 
 }
 
 /** ボーナス図柄がいずれかの有効ラインに揃ったか */
-export function checkBonusAligned(stopped: readonly [number, number, number], kind: BonusKind): boolean {
-  return findWins(stopped).some((w) => w.result === kind)
+export function checkBonusAligned(
+  stopped: readonly [number, number, number],
+  kind: BonusKind,
+  bet = 3,
+): boolean {
+  return findWins(stopped, bet).some((w) => w.result === kind)
 }
 
 /** ボーナスで各リールが狙う図柄 */
@@ -138,9 +149,9 @@ function leftCenterCherry(i0: number): boolean {
  * BAR揃い・チェリー揃いは役ではないため除外する
  * （実機でもBAR揃いはガセ目としてハズレ時に普通に停止する）。
  */
-function rawResults(i0: number, i1: number, i2: number): LineResult[] {
+function rawResults(lines: LineSet, i0: number, i1: number, i2: number): LineResult[] {
   const out: LineResult[] = []
-  for (const l of LINES) {
+  for (const l of lines) {
     const r = evalLine([symbolAt(0, i0 + l[0]), symbolAt(1, i1 + l[1]), symbolAt(2, i2 + l[2])])
     if (r !== null && r !== 'BAR' && r !== 'CHERRY') out.push(r)
   }
@@ -157,8 +168,8 @@ type PredName =
   | 'BSAFE_BIG' // BIG以外は何も揃わない（BIG成立中の安全条件）
   | 'BSAFE_REG' // REG以外は何も揃わない
 
-function predicate(name: PredName, i0: number, i1: number, i2: number): boolean {
-  const rs = rawResults(i0, i1, i2)
+function predicate(name: PredName, lines: LineSet, i0: number, i1: number, i2: number): boolean {
+  const rs = rawResults(lines, i0, i1, i2)
   switch (name) {
     case 'NONE':
       return rs.length === 0 && !leftWindowCherry(i0)
@@ -201,11 +212,11 @@ function coveredByWindows(good: Uint8Array): boolean {
   return true
 }
 
-function buildTables(name: PredName): StopTables {
+function buildTables(name: PredName, lines: LineSet): StopTables {
   const ok3 = new Uint8Array(L * L * L)
   for (let a = 0; a < L; a++)
     for (let b = 0; b < L; b++)
-      for (let c = 0; c < L; c++) ok3[(a * L + b) * L + c] = predicate(name, a, b, c) ? 1 : 0
+      for (let c = 0; c < L; c++) ok3[(a * L + b) * L + c] = predicate(name, lines, a, b, c) ? 1 : 0
 
   const pair: [Uint8Array, Uint8Array, Uint8Array] = [
     new Uint8Array(L * L),
@@ -260,13 +271,14 @@ function buildTables(name: PredName): StopTables {
   return { ok3, pair, single, root }
 }
 
-const tableCache = new Map<PredName, StopTables>()
+const tableCache = new Map<string, StopTables>()
 
-function tables(name: PredName): StopTables {
-  let t = tableCache.get(name)
+function tables(name: PredName, lines: LineSet): StopTables {
+  const key = `${name}:${lines.length}`
+  let t = tableCache.get(key)
   if (!t) {
-    t = buildTables(name)
-    tableCache.set(name, t)
+    t = buildTables(name, lines)
+    tableCache.set(key, t)
   }
   return t
 }
@@ -296,8 +308,9 @@ function tableStop(
   reel: number,
   cur: number,
   stopped: ReadonlyArray<number | null>,
+  lines: LineSet,
 ): number | null {
-  const tbl = tables(name)
+  const tbl = tables(name, lines)
   for (let slip = 0; slip <= MAX_SLIP; slip++) {
     const idx = norm(cur - slip)
     if (stateOK(tbl, reel, idx, stopped)) return idx
@@ -313,17 +326,18 @@ function finishable(
   trial: (number | null)[],
   targetOf: (reel: number) => Symbol,
   allowed: LineResult,
+  lines: LineSet,
 ): boolean {
   const j = trial.findIndex((s) => s === null)
   if (j === -1) {
-    const rs = rawResults(trial[0] as number, trial[1] as number, trial[2] as number)
+    const rs = rawResults(lines, trial[0] as number, trial[1] as number, trial[2] as number)
     if (!rs.every((r) => r === allowed)) return false
     return !leftWindowCherry(trial[0] as number)
   }
   for (let idx = 0; idx < L; idx++) {
     if (symbolAt(j, idx + l[j]) !== targetOf(j)) continue
     trial[j] = idx
-    const ok = finishable(l, trial, targetOf, allowed)
+    const ok = finishable(l, trial, targetOf, allowed, lines)
     trial[j] = null
     if (ok) return true
   }
@@ -342,18 +356,19 @@ function greedyPull(
   allowed: LineResult,
   stopped: ReadonlyArray<number | null>,
   safety: PredName,
+  lines: LineSet,
 ): number | null {
-  const safetyTbl = tables(safety)
+  const safetyTbl = tables(safety, lines)
   const isFinal = stopped.filter((s) => s !== null).length === 2
   for (let slip = 0; slip <= MAX_SLIP; slip++) {
     const idx = norm(cur - slip)
-    for (const l of LINES) {
+    for (const l of lines) {
       if (symbolAt(reel, idx + l[reel]) !== targetOf(reel)) continue
       const live = stopped.every((s, j) => j === reel || s === null || symbolAt(j, s + l[j]) === targetOf(j))
       if (!live) continue
       const trial = [...stopped]
       trial[reel] = idx
-      if (!finishable(l, trial, targetOf, allowed)) continue
+      if (!finishable(l, trial, targetOf, allowed, lines)) continue
       // 完成前の停止は、以降どう押されても安全条件へ逃げられる位置に限る
       if (!isFinal && !stateOK(safetyTbl, reel, idx, stopped)) continue
       return idx
@@ -365,6 +380,7 @@ function greedyPull(
 /**
  * 停止制御。ビタ押し位置 cur に対し、内部フラグに応じた停止位置を返す。
  * stopped は各リールの停止index（未停止・自分自身は null）。
+ * bet は賭け枚数（3枚=5ライン、1枚=中段のみ）。
  */
 export function resolveStop(
   reel: number,
@@ -372,64 +388,73 @@ export function resolveStop(
   flag: Flag,
   pendingBonus: BonusKind | null,
   stopped: ReadonlyArray<number | null>,
+  bet = 3,
 ): number {
   cur = norm(cur)
+  const lines = activeLines(bet)
 
   if (pendingBonus) {
     // 中段チェリー成立ゲーム：左リール中段チェリーのプレミアム出目を最優先
     if (flag.midCherry) {
-      const mid = tableStop('MIDC', reel, cur, stopped)
+      const mid = tableStop('MIDC', reel, cur, stopped, lines)
       if (mid !== null) return mid
       if (reel === 0) {
-        const corner = tableStop('CH_CORNER', reel, cur, stopped)
+        const corner = tableStop('CH_CORNER', reel, cur, stopped, lines)
         if (corner !== null) return corner
       }
-      return tableStop('QUIET', reel, cur, stopped) ?? cur
+      return tableStop('QUIET', reel, cur, stopped, lines) ?? cur
     }
     const safety: PredName = pendingBonus === 'BIG' ? 'BSAFE_BIG' : 'BSAFE_REG'
-    const hit = greedyPull(reel, cur, (j) => bonusTarget(pendingBonus, j), pendingBonus, stopped, safety)
+    const hit = greedyPull(reel, cur, (j) => bonusTarget(pendingBonus, j), pendingBonus, stopped, safety, lines)
     if (hit !== null) return hit
-    return tableStop(safety, reel, cur, stopped) ?? cur
+    return tableStop(safety, reel, cur, stopped, lines) ?? cur
   }
 
   switch (flag.role) {
     case 'GRAPE':
     case 'REPLAY':
       // 100%引き込み役：テーブルが全押し順・全押し位置で成立を保証する
-      return tableStop(flag.role, reel, cur, stopped) ?? tableStop('NONE', reel, cur, stopped) ?? cur
+      return (
+        tableStop(flag.role, reel, cur, stopped, lines) ??
+        tableStop('NONE', reel, cur, stopped, lines) ??
+        cur
+      )
     case 'BELL':
     case 'CLOWN': {
       // 目押し必要役：届けば揃え、届かなければ完全に外す（取りこぼし）
       const role = flag.role
-      const hit = greedyPull(reel, cur, () => role, role, stopped, 'NONE')
+      const hit = greedyPull(reel, cur, () => role, role, stopped, 'NONE', lines)
       if (hit !== null) return hit
-      return tableStop('NONE', reel, cur, stopped) ?? cur
+      return tableStop('NONE', reel, cur, stopped, lines) ?? cur
     }
     case 'CHERRY': {
-      // チェリーは左リールの表示のみ。角優先、届かなければ取りこぼし
-      if (reel === 0) {
-        const hit = tableStop('CH_CORNER', reel, cur, stopped)
+      // チェリーは左リールの表示のみ。角優先、届かなければ取りこぼし。
+      // 1枚がけは中段のみ有効なので角チェリーは狙わない
+      if (reel === 0 && bet >= 3) {
+        const hit = tableStop('CH_CORNER', reel, cur, stopped, lines)
         if (hit !== null) return hit
       }
-      return tableStop('QUIET', reel, cur, stopped) ?? cur
+      return tableStop('QUIET', reel, cur, stopped, lines) ?? cur
     }
     case 'BIG':
     case 'REG': {
       // pendingBonus 側で処理されるためここには来ないが、保険
       const safety: PredName = flag.role === 'BIG' ? 'BSAFE_BIG' : 'BSAFE_REG'
-      const hit = greedyPull(reel, cur, (j) => bonusTarget(flag.role as BonusKind, j), flag.role, stopped, safety)
+      const hit = greedyPull(reel, cur, (j) => bonusTarget(flag.role as BonusKind, j), flag.role, stopped, safety, lines)
       if (hit !== null) return hit
-      return tableStop(safety, reel, cur, stopped) ?? cur
+      return tableStop(safety, reel, cur, stopped, lines) ?? cur
     }
     default:
-      return tableStop('NONE', reel, cur, stopped) ?? cur
+      return tableStop('NONE', reel, cur, stopped, lines) ?? cur
   }
 }
 
-/** 配列検証用：全述語テーブルが全押し順・全押し位置で成立可能か */
+/** 配列検証用：全述語テーブルが全押し順・全押し位置で成立可能か（3枚/1枚がけ両方） */
 export function verifyStripDesign(): Record<string, boolean> {
   const names: PredName[] = ['NONE', 'GRAPE', 'REPLAY', 'QUIET']
   const out: Record<string, boolean> = {}
-  for (const n of names) out[n] = tables(n).root
+  for (const bet of [3, 1]) {
+    for (const n of names) out[`${n}:${bet}bet`] = tables(n, activeLines(bet)).root
+  }
   return out
 }
