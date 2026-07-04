@@ -16,10 +16,10 @@ import * as sfx from '../audio/sfx'
 import { useStatsStore } from './statsStore'
 import { useAchievementsStore } from './achievementsStore'
 
-/** リール1周にかかるミリ秒（実機準拠：約0.78秒/周） */
-export const REEL_TURN_MS = 780
+/** リール1周にかかるミリ秒（実機準拠：0.75秒/周） */
+export const REEL_TURN_MS = 750
 
-/** 1コマ進むのにかかるミリ秒（780ms ÷ 21コマ ≒ 37.1ms） */
+/** 1コマ進むのにかかるミリ秒（750ms ÷ 21コマ ≒ 35.7ms） */
 export const KOMA_MS = REEL_TURN_MS / STRIP_LENGTH
 
 /** ゲーム間の最短間隔（4.1秒ウェイト・実機規定） */

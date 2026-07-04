@@ -48,7 +48,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: box-shadow 0.2s;
+  transition: background 0.2s;
+}
+
+/*
+ * 点灯時の光暈。box-shadow を毎フレーム再計算するとメインスレッドが重くなり
+ * リールの requestAnimationFrame がコマ落ちして「速度が変わって見える」ため、
+ * 光は opacity / transform だけで動かす合成専用アニメーションにする。
+ */
+.lamp::before {
+  content: '';
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 60, 0.95) 0%, rgba(255, 200, 60, 0) 68%);
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  z-index: -1;
+  will-change: opacity, transform;
 }
 
 /* ドームのハイライト */
@@ -75,7 +93,10 @@
   background:
     radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), transparent 44%),
     radial-gradient(circle at 50% 58%, #fff6c9 0%, #ffd23f 45%, #f08c00 100%);
-  animation: pulse 0.85s ease-in-out infinite;
+}
+
+.on::before {
+  animation: halo 0.85s ease-in-out infinite;
 }
 
 .on .face {
@@ -83,8 +104,18 @@
   animation: wobble 0.85s ease-in-out infinite;
 }
 
+/* レインボーは背景を作り直さず hue-rotate で色相だけ回す（合成寄りで軽い） */
 .rainbow {
-  animation: rainbowBg 1.3s linear infinite, pulse 0.65s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), transparent 44%),
+    radial-gradient(circle at 50% 58%, #fff 0%, #ff4d4d 55%, #d81b60 100%);
+  animation: hueSpin 1.3s linear infinite;
+  will-change: filter;
+}
+
+.rainbow::before {
+  background: radial-gradient(circle, rgba(255, 120, 200, 0.95) 0%, rgba(255, 120, 200, 0) 68%);
+  animation: halo 0.6s ease-in-out infinite;
 }
 
 .rainbow .face {
@@ -100,25 +131,16 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
-@keyframes pulse {
+/* 合成専用（opacity + transform）の光暈パルス */
+@keyframes halo {
   0%,
   100% {
-    box-shadow:
-      0 0 0 3px #3a3745,
-      0 0 0 6px #b9b9c8,
-      0 0 0 7px #55525e,
-      0 6px 12px rgba(0, 0, 0, 0.6),
-      inset 0 -8px 14px rgba(0, 0, 0, 0.35),
-      0 0 24px 6px rgba(255, 200, 60, 0.65);
+    opacity: 0.5;
+    transform: scale(0.9);
   }
   50% {
-    box-shadow:
-      0 0 0 3px #3a3745,
-      0 0 0 6px #b9b9c8,
-      0 0 0 7px #55525e,
-      0 6px 12px rgba(0, 0, 0, 0.6),
-      inset 0 -8px 14px rgba(0, 0, 0, 0.35),
-      0 0 46px 16px rgba(255, 200, 60, 0.95);
+    opacity: 1;
+    transform: scale(1.18);
   }
 }
 
@@ -132,23 +154,8 @@
   }
 }
 
-@keyframes rainbowBg {
-  0% {
-    background: radial-gradient(circle at 50% 55%, #fff, #ff5d5d);
-  }
-  20% {
-    background: radial-gradient(circle at 50% 55%, #fff, #ffb84f);
-  }
-  40% {
-    background: radial-gradient(circle at 50% 55%, #fff, #ffe94f);
-  }
-  60% {
-    background: radial-gradient(circle at 50% 55%, #fff, #5dff7c);
-  }
-  80% {
-    background: radial-gradient(circle at 50% 55%, #fff, #5da9ff);
-  }
-  100% {
-    background: radial-gradient(circle at 50% 55%, #fff, #c45dff);
+@keyframes hueSpin {
+  to {
+    filter: hue-rotate(360deg);
   }
 }
