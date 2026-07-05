@@ -68,8 +68,8 @@ export default function App() {
             ))}
           </div>
         </div>
-        <CreditDisplay />
         <ReelSet />
+        <CreditDisplay />
         <StatusLamps />
         <Controls />
       </main>
