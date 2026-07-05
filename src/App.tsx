@@ -14,6 +14,7 @@ import { useGameStore } from './state/gameStore'
 import bgUrl from './assets/bg.webp'
 import bonusUrl from './assets/bonus.webp'
 import marqueeUrl from './assets/marquee.webp'
+import mascotUrl from './assets/mascot.webp'
 import styles from './App.module.css'
 
 type Tab = 'data' | 'stats' | 'ach' | 'debug'
@@ -41,10 +42,9 @@ export default function App() {
       className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}
       style={{ backgroundImage: appBg }}
     >
-      <header className={styles.header}>
-        <h1 className={styles.title} onClick={() => setTitleTaps((n) => n + 1)}>
-          ピカピカスロット
-        </h1>
+      <header className={styles.header} onClick={() => setTitleTaps((n) => n + 1)}>
+        <img className={styles.headerMascot} src={mascotUrl} alt="" draggable={false} />
+        <h1 className={styles.title}>ピカピカスロット</h1>
       </header>
 
       <TopCounter />
@@ -72,6 +72,10 @@ export default function App() {
         <CreditDisplay />
         <StatusLamps />
         <Controls />
+        <div className={styles.charPanel}>
+          <img className={styles.charImg} src={mascotUrl} alt="" draggable={false} />
+          <span className={styles.charBanner}>LET'S PLAY!</span>
+        </div>
       </main>
 
       <nav className={styles.tabBar}>
