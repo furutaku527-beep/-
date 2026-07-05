@@ -19,6 +19,13 @@
   transition: box-shadow 0.15s;
 }
 
+/* 筐体スキンの金枠内にはめ込む用：暗い縁取りを外す */
+.bareSet {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .win {
   animation: winFlash 0.45s ease-in-out 3;
 }
