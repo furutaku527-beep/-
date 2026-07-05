@@ -4,23 +4,19 @@ import { useGameStore } from '../state/gameStore'
 import { SlotSymbol } from './symbols'
 import styles from './Reel.module.css'
 
+const ITEM_H = 64 // px
 /** 巻き付き表示用にストリップを3周分描画する（中央の周を表示に使う） */
 const COPIES = 3
 
 interface Props {
   reel: number
-  /** 1コマの高さ(px)。既定64。筐体では小さくする */
-  itemH?: number
-  /** 表示窓の幅(px)。既定82 */
-  winW?: number
 }
 
 /**
  * リール1本。回転は React の再レンダリングを介さず transform だけを
  * requestAnimationFrame で直接更新する（目押しのための滑らかさ優先）。
  */
-export function Reel({ reel, itemH = 64, winW = 82 }: Props) {
-  const ITEM_H = itemH
+export function Reel({ reel }: Props) {
   const spinning = useGameStore((s) => s.reels[reel].spinning)
   const index = useGameStore((s) => s.reels[reel].index)
   const spinStartAt = useGameStore((s) => s.spinStartAt)
@@ -85,14 +81,12 @@ export function Reel({ reel, itemH = 64, winW = 82 }: Props) {
     return () => cancelAnimationFrame(raf)
   }, [spinning, index, spinStartAt, koma])
 
-  const symScale = itemH / 64
-
   return (
-    <div className={styles.window} style={{ height: ITEM_H * 3, width: winW }}>
+    <div className={styles.window} style={{ height: ITEM_H * 3 }}>
       <div ref={stripRef} className={styles.strip}>
         {cells.map(({ key, idx }) => (
           <div key={key} className={styles.cell} style={{ height: ITEM_H }}>
-            <SlotSymbol symbol={symbolAt(reel, idx)} scale={symScale} />
+            <SlotSymbol symbol={symbolAt(reel, idx)} />
           </div>
         ))}
       </div>

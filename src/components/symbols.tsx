@@ -32,8 +32,6 @@ if (typeof window !== 'undefined') {
 interface SlotSymbolProps {
   symbol: Symbol
   size?: number
-  /** SYMBOL_BOX 全体に掛ける倍率（筐体でコマを小さく描くときに使う） */
-  scale?: number
 }
 
 /**
@@ -52,9 +50,8 @@ const SYMBOL_BOX: Record<Symbol, { w: number; h: number }> = {
 }
 
 /** リール図柄1つを描画する */
-export function SlotSymbol({ symbol, size, scale = 1 }: SlotSymbolProps) {
-  const base = size ? { w: size, h: size } : SYMBOL_BOX[symbol]
-  const box = { w: Math.round(base.w * scale), h: Math.round(base.h * scale) }
+export function SlotSymbol({ symbol, size }: SlotSymbolProps) {
+  const box = size ? { w: size, h: size } : SYMBOL_BOX[symbol]
   return (
     <img
       src={SYMBOL_ART[symbol]}
