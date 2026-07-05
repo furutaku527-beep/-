@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
 import { AchievementsPanel } from './components/AchievementsPanel'
-import { Cabinet } from './components/Cabinet'
+import { Controls } from './components/Controls'
+import { CreditDisplay } from './components/CreditDisplay'
 import { DataCounter } from './components/DataCounter'
 import { DebugMenu } from './components/DebugMenu'
+import { NotifyLamp } from './components/NotifyLamp'
+import { ReelSet } from './components/ReelSet'
 import { StatsPanel } from './components/StatsPanel'
+import { StatusLamps } from './components/StatusLamps'
+import { TopCounter } from './components/TopCounter'
 import { useAchievementsStore } from './state/achievementsStore'
 import { useGameStore } from './state/gameStore'
 import bgUrl from './assets/bg.webp'
 import bonusUrl from './assets/bonus.webp'
+import marqueeUrl from './assets/marquee.webp'
+import mascotUrl from './assets/mascot.webp'
 import styles from './App.module.css'
 
 type Tab = 'data' | 'stats' | 'ach' | 'debug'
@@ -35,7 +42,41 @@ export default function App() {
       className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}
       style={{ backgroundImage: appBg }}
     >
-      <Cabinet onNameTap={() => setTitleTaps((n) => n + 1)} />
+      <header className={styles.header} onClick={() => setTitleTaps((n) => n + 1)}>
+        <img className={styles.headerMascot} src={mascotUrl} alt="" draggable={false} />
+        <h1 className={styles.title}>ピカピカスロット</h1>
+      </header>
+
+      <TopCounter />
+
+      <main className={styles.machine}>
+        <div
+          className={styles.marquee}
+          style={{
+            backgroundImage: `radial-gradient(circle at 50% 45%, rgba(10, 8, 20, 0.42), rgba(10, 8, 20, 0.12) 70%), url(${marqueeUrl})`,
+          }}
+        >
+          <div className={styles.decoLights}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={styles.decoDot} style={{ animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
+          <NotifyLamp />
+          <div className={styles.decoLights}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={styles.decoDot} style={{ animationDelay: `${i * 0.2 + 0.1}s` }} />
+            ))}
+          </div>
+        </div>
+        <ReelSet />
+        <CreditDisplay />
+        <StatusLamps />
+        <Controls />
+        <div className={styles.charPanel}>
+          <img className={styles.charImg} src={mascotUrl} alt="" draggable={false} />
+          <span className={styles.charBanner}>LET'S PLAY!</span>
+        </div>
+      </main>
 
       <nav className={styles.tabBar}>
         <button className={tab === 'data' ? styles.tabActive : styles.tab} onClick={() => setTab('data')}>
