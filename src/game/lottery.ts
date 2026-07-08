@@ -3,28 +3,37 @@ import type { AnnounceTiming, Flag, Rng, SettingLevel } from './types'
 
 /**
  * レバーON時の内部抽選。
- * 累積確率で順に判定する。中段チェリーはBIG確定なので最初に判定し、
- * 残りのBIG確率から差し引くことで合計のBIG確率がテーブル通りになる。
+ *
+ * ボーナスは実機同様に「単独」「チェリー重複」「中段チェリー(BIG)」に分かれる。
+ * - 中段チェリー：BIG確定・プレミア（BIG確率に内包）
+ * - チェリー重複BIG/REG：チェリーと同時にボーナス当選（BIG/REG確率とチェリー
+ *   確率の両方に内包）。このゲームはチェリーを表示し、ボーナスは持ち越す
+ * - 単独BIG/REG：ボーナスのみ
+ * 各カテゴリを差し引くことで、合計のBIG/REG/チェリー確率はテーブル通りになる。
  */
 export function spin(level: SettingLevel, rng: Rng = Math.random): Flag {
   const s = SETTINGS[level]
   const r = rng()
 
   const pMid = 1 / s.midCherry
-  const pBig = 1 / s.big - pMid // 中段チェリー分を除いた単独BIG
-  const pReg = 1 / s.reg
+  const pCherryBig = 1 / s.cherryBig // チェリー重複BIG
+  const pCherryReg = 1 / s.cherryReg // チェリー重複REG
+  const pBigAlone = 1 / s.big - pMid - pCherryBig // 単独BIG
+  const pRegAlone = 1 / s.reg - pCherryReg // 単独REG
+  const pCherrySingle = 1 / s.cherry - pCherryBig - pCherryReg // 単チェリー
   const pGrape = 1 / s.grape
-  const pCherry = 1 / s.cherry
   const pClown = 1 / s.clown
   const pBell = 1 / s.bell
   const pReplay = 1 / s.replay
 
   let acc = 0
   if (r < (acc += pMid)) return { role: 'BIG', midCherry: true }
-  if (r < (acc += pBig)) return { role: 'BIG', midCherry: false }
-  if (r < (acc += pReg)) return { role: 'REG', midCherry: false }
+  if (r < (acc += pCherryBig)) return { role: 'CHERRY', midCherry: false, bonusOverlap: 'BIG' }
+  if (r < (acc += pBigAlone)) return { role: 'BIG', midCherry: false }
+  if (r < (acc += pCherryReg)) return { role: 'CHERRY', midCherry: false, bonusOverlap: 'REG' }
+  if (r < (acc += pRegAlone)) return { role: 'REG', midCherry: false }
+  if (r < (acc += pCherrySingle)) return { role: 'CHERRY', midCherry: false }
   if (r < (acc += pGrape)) return { role: 'GRAPE', midCherry: false }
-  if (r < (acc += pCherry)) return { role: 'CHERRY', midCherry: false }
   if (r < (acc += pClown)) return { role: 'CLOWN', midCherry: false }
   if (r < (acc += pBell)) return { role: 'BELL', midCherry: false }
   if (r < (acc += pReplay)) return { role: 'REPLAY', midCherry: false }

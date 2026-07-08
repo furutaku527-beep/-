@@ -331,9 +331,20 @@ function doStart(set: Set, get: Get): void {
     // 通常時のみ内部抽選（レバーONの瞬間に当選役が確定する）
     flag = spin(s.setting)
     if (flag.role === 'BIG' || flag.role === 'REG') {
+      // 単独ボーナス／中段チェリー：この瞬間から狙える
       pendingBonus = flag.role
       announceTiming = drawAnnounceTiming()
       premium = drawPremium(s.setting, flag.midCherry)
+      if (announceTiming === 'pre') {
+        lamp = premium ? 'rainbow' : 'on'
+        sfx.playNotify()
+        if (premium) sfx.playPremium()
+      }
+    } else if (flag.bonusOverlap) {
+      // チェリー重複：このゲームはチェリー表示のみ。ボーナスは settle で持ち越す。
+      // 先告知ならチェリーと同時（＝レバーで）ペカる
+      announceTiming = drawAnnounceTiming()
+      premium = drawPremium(s.setting, false)
       if (announceTiming === 'pre') {
         lamp = premium ? 'rainbow' : 'on'
         sfx.playNotify()
@@ -491,13 +502,30 @@ function settle(set: Set, get: Get): void {
     }
   }
 
+  // チェリー重複：このゲームでチェリーを表示し、ボーナスを次ゲーム以降へ持ち越す。
+  // 後告知ならチェリーの後にペカる（＝「重複だ!」の瞬間）。
+  let overlapPatch: Partial<GameState> = {}
+  if (flag.bonusOverlap) {
+    let lamp = s.lamp
+    let message = s.message
+    if (s.announceTiming === 'post' && lamp === 'off') {
+      lamp = s.premium ? 'rainbow' : 'on'
+      sfx.playNotify()
+      if (s.premium) sfx.playPremium()
+      message = 'ピカッ!'
+    } else if (lamp !== 'off') {
+      message = 'ピカッ!'
+    }
+    overlapPatch = { pendingBonus: flag.bonusOverlap, lamp, message }
+  }
+
   stats.addGame(payout, gameBet)
   if (payout > 0) {
     // 実機同様、小役固有のメロディはなく払い出し枚数分の「ピロピロ」だけ鳴る
     sfx.playPayout(payout)
-    set({ credits: s.credits + payout, lastPayout: payout, winCells })
+    set({ credits: s.credits + payout, lastPayout: payout, winCells, ...overlapPatch })
   } else {
-    set({ winCells: [] })
+    set({ winCells: [], ...overlapPatch })
   }
 
   checkAchievements(get)

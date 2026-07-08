@@ -81,3 +81,67 @@ describe('中段チェリー', () => {
     expect(denom).toBeLessThan(3276.8 * 1.15)
   })
 })
+
+describe('チェリー重複', () => {
+  const N = 3_000_000
+
+  it('全設定でチェリーの総数（単＋重複）が公表の1/cherryに収束', () => {
+    for (const lvl of [1, 6] as const) {
+      const rng = mulberry32(1000 + lvl)
+      let cherryDisplayed = 0
+      for (let i = 0; i < N; i++) {
+        const f = spin(lvl, rng)
+        // 実機のチェリー＝単チェリー＋チェリー重複BIG/REG（表示される全チェリー）
+        if (f.role === 'CHERRY') cherryDisplayed++
+      }
+      const denom = N / cherryDisplayed
+      expect(denom).toBeGreaterThan(SETTINGS[lvl].cherry * 0.97)
+      expect(denom).toBeLessThan(SETTINGS[lvl].cherry * 1.03)
+    }
+  })
+
+  it('BIG総数（単独＋重複＋中段）とREG総数（単独＋重複）が公表値に収束', () => {
+    for (const lvl of [1, 6] as const) {
+      const rng = mulberry32(2000 + lvl)
+      let big = 0
+      let reg = 0
+      for (let i = 0; i < N; i++) {
+        const f = spin(lvl, rng)
+        if (f.role === 'BIG' || f.bonusOverlap === 'BIG') big++
+        if (f.role === 'REG' || f.bonusOverlap === 'REG') reg++
+      }
+      expect(N / big).toBeGreaterThan(SETTINGS[lvl].big * 0.95)
+      expect(N / big).toBeLessThan(SETTINGS[lvl].big * 1.05)
+      expect(N / reg).toBeGreaterThan(SETTINGS[lvl].reg * 0.95)
+      expect(N / reg).toBeLessThan(SETTINGS[lvl].reg * 1.05)
+    }
+  })
+
+  it('チェリー重複BIG/REGが公表内訳の確率で出現し、重複はrole=CHERRYで表現される', () => {
+    const rng = mulberry32(31337)
+    let cBig = 0
+    let cReg = 0
+    for (let i = 0; i < N; i++) {
+      const f = spin(6, rng)
+      if (f.bonusOverlap) {
+        expect(f.role).toBe('CHERRY') // 重複はチェリー表示扱い
+        if (f.bonusOverlap === 'BIG') cBig++
+        else cReg++
+      }
+    }
+    expect(N / cBig).toBeGreaterThan(SETTINGS[6].cherryBig * 0.9)
+    expect(N / cBig).toBeLessThan(SETTINGS[6].cherryBig * 1.1)
+    expect(N / cReg).toBeGreaterThan(SETTINGS[6].cherryReg * 0.9)
+    expect(N / cReg).toBeLessThan(SETTINGS[6].cherryReg * 1.1)
+  })
+
+  it('単チェリー（重複なし）も存在する', () => {
+    const rng = mulberry32(4242)
+    let single = 0
+    for (let i = 0; i < 200_000; i++) {
+      const f = spin(6, rng)
+      if (f.role === 'CHERRY' && !f.bonusOverlap) single++
+    }
+    expect(single).toBeGreaterThan(0)
+  })
+})

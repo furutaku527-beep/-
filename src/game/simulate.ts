@@ -33,6 +33,19 @@ export function simulate(level: SettingLevel, games: number, rng: Rng = Math.ran
   for (let i = 0; i < games; i++) {
     const flag = spin(level, rng)
     if (flag.role !== 'REPLAY') diff -= BET
+    // チェリー重複はチェリー払い出し＋ボーナス純増の両方を計上する
+    if (flag.bonusOverlap) {
+      cherry++
+      diff += smallPayout('CHERRY')
+      if (flag.bonusOverlap === 'BIG') {
+        big++
+        diff += bonusNetGain('BIG')
+      } else {
+        reg++
+        diff += bonusNetGain('REG')
+      }
+      continue
+    }
     switch (flag.role) {
       case 'BIG':
         big++
