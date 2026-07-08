@@ -17,6 +17,12 @@ export interface Flag {
   role: Role
   /** 中段チェリー経由のBIG（プレミアム扱い） */
   midCherry: boolean
+  /**
+   * チェリー重複ボーナス。role='CHERRY' でこの値があると
+   * 「チェリーと同時にボーナスを当選」した重複を表す。
+   * このゲームはチェリーを表示し、ボーナスは次ゲーム以降に持ち越す。
+   */
+  bonusOverlap?: BonusKind
 }
 
 /** 1設定分の確率テーブル（値は 1/n の分母 n） */
@@ -30,6 +36,10 @@ export interface SettingRates {
   replay: number
   /** 中段チェリー（BIG確定・BIG確率に内包） */
   midCherry: number
+  /** チェリー重複BIG（BIG確率・チェリー確率の双方に内包） */
+  cherryBig: number
+  /** チェリー重複REG（REG確率・チェリー確率の双方に内包） */
+  cherryReg: number
 }
 
 /** ボーナス種別 */
