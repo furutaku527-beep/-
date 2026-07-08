@@ -158,6 +158,27 @@ function rawResults(lines: LineSet, i0: number, i1: number, i2: number): LineRes
   return out
 }
 
+/**
+ * ボーナス図柄テンパイか（有効ライン上にボーナス図柄=STARが2つ以上並ぶ）。
+ * 実機ジャグラーではこの形（7・7・× 等）は「ボーナス確定リーチ目」であり、
+ * ボーナス非成立の通常時には絶対に出ない。逆に出たら次にペカる。
+ */
+export function isBonusTempai(
+  lines: LineSet,
+  i0: number,
+  i1: number,
+  i2: number,
+): boolean {
+  for (const l of lines) {
+    let stars = 0
+    if (symbolAt(0, i0 + l[0]) === 'STAR') stars++
+    if (symbolAt(1, i1 + l[1]) === 'STAR') stars++
+    if (symbolAt(2, i2 + l[2]) === 'STAR') stars++
+    if (stars >= 2) return true
+  }
+  return false
+}
+
 type PredName =
   | 'NONE' // 何も揃わない・チェリー非表示（ハズレ）
   | 'GRAPE' // ぶどうのみ成立（必ず揃える）
@@ -170,19 +191,22 @@ type PredName =
 
 function predicate(name: PredName, lines: LineSet, i0: number, i1: number, i2: number): boolean {
   const rs = rawResults(lines, i0, i1, i2)
+  // 通常時（ボーナス非成立）はボーナス図柄テンパイを絶対に出さない。
+  // → テンパイ形が出るのはボーナス成立中だけ＝「出たら確定リーチ目」になる。
+  const tempai = isBonusTempai(lines, i0, i1, i2)
   switch (name) {
     case 'NONE':
-      return rs.length === 0 && !leftWindowCherry(i0)
+      return rs.length === 0 && !leftWindowCherry(i0) && !tempai
     case 'GRAPE':
-      return rs.length > 0 && rs.every((r) => r === 'GRAPE') && !leftWindowCherry(i0)
+      return rs.length > 0 && rs.every((r) => r === 'GRAPE') && !leftWindowCherry(i0) && !tempai
     case 'REPLAY':
-      return rs.length > 0 && rs.every((r) => r === 'REPLAY') && !leftWindowCherry(i0)
+      return rs.length > 0 && rs.every((r) => r === 'REPLAY') && !leftWindowCherry(i0) && !tempai
     case 'QUIET':
-      return rs.length === 0 && !leftCenterCherry(i0)
+      return rs.length === 0 && !leftCenterCherry(i0) && !tempai
     case 'CH_CORNER':
-      return rs.length === 0 && leftWindowCherry(i0) && !leftCenterCherry(i0)
+      return rs.length === 0 && leftWindowCherry(i0) && !leftCenterCherry(i0) && !tempai
     case 'MIDC':
-      return rs.length === 0 && leftCenterCherry(i0)
+      return rs.length === 0 && leftCenterCherry(i0) && !tempai
     case 'BSAFE_BIG':
       return rs.every((r) => r === 'BIG') && !leftWindowCherry(i0)
     case 'BSAFE_REG':
@@ -330,9 +354,16 @@ function finishable(
 ): boolean {
   const j = trial.findIndex((s) => s === null)
   if (j === -1) {
-    const rs = rawResults(lines, trial[0] as number, trial[1] as number, trial[2] as number)
+    const i0 = trial[0] as number
+    const rs = rawResults(lines, i0, trial[1] as number, trial[2] as number)
     if (!rs.every((r) => r === allowed)) return false
-    return !leftWindowCherry(trial[0] as number)
+    if (leftWindowCherry(i0)) return false
+    // ベル/ピエロ等の小役引き込みではボーナス図柄テンパイを出さない
+    // （allowed がボーナスのときはテンパイOK＝狙って揃える途中形）
+    if (allowed !== 'BIG' && allowed !== 'REG' && isBonusTempai(lines, i0, trial[1] as number, trial[2] as number)) {
+      return false
+    }
+    return true
   }
   for (let idx = 0; idx < L; idx++) {
     if (symbolAt(j, idx + l[j]) !== targetOf(j)) continue
@@ -409,7 +440,9 @@ let cherryCache: CherryTables | null = null
 function cherryTables(): CherryTables {
   if (cherryCache) return cherryCache
   const lines = LINES
-  const quiet3 = (s: number, b: number, c: number) => rawResults(lines, s, b, c).length === 0
+  // チェリー制御中も通常時なのでボーナス図柄テンパイは出さない
+  const quiet3 = (s: number, b: number, c: number) =>
+    rawResults(lines, s, b, c).length === 0 && !isBonusTempai(lines, s, b, c)
   const corner = new Uint8Array(L)
   for (let s = 0; s < L; s++) corner[s] = leftWindowCherry(s) && !leftCenterCherry(s) ? 1 : 0
   const phys = new Uint8Array(L)

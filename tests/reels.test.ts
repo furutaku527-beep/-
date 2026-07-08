@@ -3,6 +3,7 @@ import {
   checkBonusAligned,
   evalLine,
   findWins,
+  isBonusTempai,
   LINES,
   resolveStop,
   STRIP_LENGTH,
@@ -112,6 +113,32 @@ describe('停止制御（5ライン）', () => {
           const idx = stopAll([c0, c1, c2], noFlag)
           expect(findWins(idx)).toHaveLength(0)
           expect(windowSymbols(0, idx[0])).not.toContain('CHERRY')
+        }
+      }
+    }
+  })
+
+  it('通常時（ハズレ/ぶどう/リプレイ/チェリー）はボーナス図柄テンパイを絶対に出さない', () => {
+    const flags: Flag[] = [
+      noFlag,
+      { role: 'GRAPE', midCherry: false },
+      { role: 'REPLAY', midCherry: false },
+      { role: 'CHERRY', midCherry: false },
+    ]
+    const orders = [
+      [0, 1, 2],
+      [1, 2, 0],
+      [2, 1, 0],
+    ]
+    for (const flag of flags) {
+      for (const order of orders) {
+        for (let c0 = 0; c0 < STRIP_LENGTH; c0 += 2) {
+          for (let c1 = 0; c1 < STRIP_LENGTH; c1 += 2) {
+            for (let c2 = 0; c2 < STRIP_LENGTH; c2 += 2) {
+              const idx = stopAll([c0, c1, c2], flag, null, order)
+              expect(isBonusTempai(LINES, idx[0], idx[1], idx[2])).toBe(false)
+            }
+          }
         }
       }
     }
@@ -238,6 +265,32 @@ describe('停止制御（5ライン）', () => {
         }
       }
     }
+  })
+})
+
+describe('リーチ目（ボーナス確定目）', () => {
+  it('isBonusTempai: 有効ライン上にSTARが2つ以上でtrue', () => {
+    // 中段ラインにSTARを2つ置ける停止index（左STAR・中STAR）
+    const s0 = STRIPS[0].indexOf('STAR')
+    const s1 = STRIPS[1].indexOf('STAR')
+    const anyR = 0
+    expect(isBonusTempai([[0, 0, 0]], s0, s1, anyR)).toBe(true)
+  })
+
+  it('ボーナス成立中は「テンパイ外れ（リーチ目）」が発生し得る', () => {
+    // BIG成立中に、7を狙える押し位置と揃わない押し位置を混ぜて探索し、
+    // 「揃ってはいないがボーナス図柄テンパイ」の出目が少なくとも1つ出ることを確認
+    let found = false
+    for (let c0 = 0; c0 < STRIP_LENGTH && !found; c0++) {
+      for (let c1 = 0; c1 < STRIP_LENGTH && !found; c1++) {
+        for (let c2 = 0; c2 < STRIP_LENGTH && !found; c2++) {
+          const idx = stopAll([c0, c1, c2], noFlag, 'BIG')
+          const aligned = checkBonusAligned(idx, 'BIG')
+          if (!aligned && isBonusTempai(LINES, idx[0], idx[1], idx[2])) found = true
+        }
+      }
+    }
+    expect(found).toBe(true)
   })
 })
 
