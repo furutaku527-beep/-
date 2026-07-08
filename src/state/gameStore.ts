@@ -5,6 +5,7 @@ import { BET, BONUS_GAMES, BONUS_GAME_PAYOUT, smallPayout } from '../game/payout
 import {
   checkBonusAligned,
   findWins,
+  isBonusTempai,
   LINES,
   resolveStop,
   STRIP_LENGTH,
@@ -454,7 +455,10 @@ function settle(set: Set, get: Get): void {
     }
 
     stats.addGame(0, gameBet)
-    set({ lamp, message: lamp !== s.lamp ? 'ピカッ!' : s.message, winCells: [] })
+    // ボーナス図柄テンパイ外れ＝リーチ目（ボーナス確定。通常時は絶対に出ない形）
+    const tempai = isBonusTempai(LINES, idx3[0], idx3[1], idx3[2])
+    const msg = lamp !== s.lamp ? 'ピカッ!' : tempai ? 'リーチ目!' : s.message
+    set({ lamp, message: msg, winCells: [] })
     checkAchievements(get)
     maybeAuto(get)
     return
