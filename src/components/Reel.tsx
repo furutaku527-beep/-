@@ -83,7 +83,7 @@ export function Reel({ reel }: Props) {
 
   return (
     <div className={styles.window} style={{ height: ITEM_H * 3 }}>
-      <div ref={stripRef} className={styles.strip}>
+      <div ref={stripRef} className={`${styles.strip} ${spinning ? styles.spinning : ''}`}>
         {cells.map(({ key, idx }) => (
           <div key={key} className={styles.cell} style={{ height: ITEM_H }}>
             <SlotSymbol symbol={symbolAt(reel, idx)} />

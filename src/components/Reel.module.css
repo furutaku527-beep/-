@@ -18,10 +18,16 @@
     inset 0 -10px 14px rgba(0, 0, 0, 0.5);
 }
 
-/* 回転はtransformのみで駆動（ブラーなし＝目押し優先） */
+/* 回転はtransformのみで駆動。回転中のみ縦モーションブラーを適用して
+   実機ドラムの残像感を再現する（図柄が縦に流れて見え、リズムで目押ししやすい）。
+   ストリップ内容は不変なのでブラーは一度ラスタライズされ、以降はtransform合成のみ＝軽量。 */
 .strip {
   will-change: transform;
   backface-visibility: hidden;
+}
+
+.spinning {
+  filter: url(#reelBlur);
 }
 
 .cell {
