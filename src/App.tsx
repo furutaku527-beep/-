@@ -42,6 +42,15 @@ export default function App() {
       className={`${styles.app} ${inBonus ? styles.bonusMode : ''}`}
       style={{ backgroundImage: appBg }}
     >
+      {/* 回転中リール用の縦方向モーションブラー（実機ドラムの残像を再現） */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <filter id="reelBlur" x="-10%" y="-30%" width="120%" height="160%">
+            <feGaussianBlur stdDeviation="0 6" />
+          </filter>
+        </defs>
+      </svg>
+
       <header className={styles.header} onClick={() => setTitleTaps((n) => n + 1)}>
         <img className={styles.headerMascot} src={mascotUrl} alt="" draggable={false} />
         <h1 className={styles.title}>ピカピカスロット</h1>
