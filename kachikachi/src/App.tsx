@@ -5,6 +5,7 @@ import { SceneTabs } from './components/SceneTabs'
 import { GamesPanel } from './components/GamesPanel'
 import { CounterCard } from './components/CounterCard'
 import { CombinePanel } from './components/CombinePanel'
+import { EstimatePanel } from './components/EstimatePanel'
 import { SettingsSheet } from './components/SettingsSheet'
 import { unlockAudio } from './sfx'
 
@@ -48,6 +49,8 @@ function useWakeLock(enabled: boolean): void {
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const keepAwake = useCounterStore((s) => s.prefs.keepAwake)
+  const view = useCounterStore((s) => s.view)
+  const setView = useCounterStore((s) => s.setView)
   useWakeLock(keepAwake)
 
   // iOS Safari対策：最初のタッチでAudioContextを起こす
@@ -74,17 +77,39 @@ export default function App() {
       </header>
 
       <SceneTabs />
-      <GamesPanel />
 
-      <div className="grid">
-        {COLOR_KEYS.map((key) => (
-          <CounterCard key={key} colorKey={key} />
-        ))}
-      </div>
-
-      <CombinePanel />
+      {view === 'counter' ? (
+        <>
+          <GamesPanel />
+          <div className="grid">
+            {COLOR_KEYS.map((key) => (
+              <CounterCard key={key} colorKey={key} />
+            ))}
+          </div>
+          <CombinePanel />
+        </>
+      ) : (
+        <EstimatePanel />
+      )}
 
       <p className="footNote">タップでカウント。データは自動保存され、オフラインでも動作します。</p>
+
+      <nav className="tabBar" aria-label="画面切替">
+        <button
+          type="button"
+          className={`tabBtn${view === 'counter' ? ' is-active' : ''}`}
+          onClick={() => setView('counter')}
+        >
+          🔘 カウンター
+        </button>
+        <button
+          type="button"
+          className={`tabBtn${view === 'estimate' ? ' is-active' : ''}`}
+          onClick={() => setView('estimate')}
+        >
+          🌺 設定推測
+        </button>
+      </nav>
 
       {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
     </div>

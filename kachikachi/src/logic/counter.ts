@@ -27,17 +27,50 @@ export interface CounterCell {
   count: number
 }
 
+/** ボーナス関連のカウント（設定推測に使う） */
+export interface BonusData {
+  big: number
+  reg: number
+  /** BIG中に成立したスイカの回数 */
+  bigSuika: number
+}
+
+/** 示唆ランプの色 */
+export type LampColor = 'blue' | 'green' | 'yellow' | 'red' | 'rainbow'
+/** 示唆の種類: REG中サイドランプ / BIG終了時トップランプ / REG終了時トップランプ */
+export type HintGroup = 'side' | 'endBig' | 'endReg'
+
+export const LAMP_COLORS: readonly LampColor[] = ['blue', 'green', 'yellow', 'red', 'rainbow']
+export const HINT_GROUPS: readonly HintGroup[] = ['side', 'endBig', 'endReg']
+
+export type HintData = Record<HintGroup, Record<LampColor, number>>
+
 export interface SceneData {
   /** 総回転数（ゲーム数） */
   games: number
   cells: Record<ColorKey, CounterCell>
+  bonus: BonusData
+  hints: HintData
 }
 
+/** ハナハナ用のデフォルト割り当て（役名は自由に変更可能） */
 export const DEFAULT_LABELS: Record<ColorKey, string> = {
-  white: 'ぶどう',
-  red: 'チェリー',
-  green: 'スイカ',
-  yellow: 'ベル',
+  white: 'ベル',
+  red: 'スイカ',
+  green: 'チェリー',
+  yellow: 'その他',
+}
+
+function createLampCounts(): Record<LampColor, number> {
+  return { blue: 0, green: 0, yellow: 0, red: 0, rainbow: 0 }
+}
+
+export function createBonus(): BonusData {
+  return { big: 0, reg: 0, bigSuika: 0 }
+}
+
+export function createHints(): HintData {
+  return { side: createLampCounts(), endBig: createLampCounts(), endReg: createLampCounts() }
 }
 
 export function createScene(): SceneData {
@@ -49,6 +82,8 @@ export function createScene(): SceneData {
       green: { label: DEFAULT_LABELS.green, count: 0 },
       yellow: { label: DEFAULT_LABELS.yellow, count: 0 },
     },
+    bonus: createBonus(),
+    hints: createHints(),
   }
 }
 
@@ -99,6 +134,27 @@ export function addGames(scene: SceneData, delta: number): SceneData {
   return { ...scene, games: clamp(scene.games + delta) }
 }
 
+/** ボーナスカウントの増減 */
+export function addBonus(scene: SceneData, key: keyof BonusData, delta: number): SceneData {
+  return { ...scene, bonus: { ...scene.bonus, [key]: clamp(scene.bonus[key] + delta) } }
+}
+
+/** 示唆ランプ記録の増減 */
+export function addHint(
+  scene: SceneData,
+  group: HintGroup,
+  color: LampColor,
+  delta: number,
+): SceneData {
+  return {
+    ...scene,
+    hints: {
+      ...scene.hints,
+      [group]: { ...scene.hints[group], [color]: clamp(scene.hints[group][color] + delta) },
+    },
+  }
+}
+
 /** シーン全体をリセット（ラベルは保持） */
 export function resetScene(scene: SceneData): SceneData {
   return {
@@ -109,6 +165,8 @@ export function resetScene(scene: SceneData): SceneData {
       green: { ...scene.cells.green, count: 0 },
       yellow: { ...scene.cells.yellow, count: 0 },
     },
+    bonus: createBonus(),
+    hints: createHints(),
   }
 }
 

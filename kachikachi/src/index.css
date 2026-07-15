@@ -45,12 +45,46 @@ button {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 16px);
+  padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 76px);
   display: flex;
   flex-direction: column;
   gap: 12px;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* ---- 下部タブバー ---- */
+.tabBar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px 14px calc(env(safe-area-inset-bottom) + 8px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  z-index: 5;
+}
+
+.tabBtn {
+  padding: 11px 0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.tabBtn.is-active {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--panel2);
 }
 
 /* ---- ヘッダー ---- */
@@ -387,6 +421,207 @@ button {
 .chip-red.is-on { background: var(--c-red); color: #fff; border-color: var(--c-red); }
 .chip-green.is-on { background: var(--c-green); color: #fff; border-color: var(--c-green); }
 .chip-yellow.is-on { background: var(--c-yellow); color: #1b2028; border-color: var(--c-yellow); }
+
+/* ---- 設定推測タブ ---- */
+.estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.estimateModeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.estimateModeRow .signBtn {
+  min-width: 84px;
+  font-size: 13px;
+}
+
+.estimateMachine {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.panelBox {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panelTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.panelCaption {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.bonusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.bonusBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+.bonusBtn:active {
+  background: var(--line);
+}
+
+.bonusBtn.is-minus {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.bonus-big { border-bottom: 3px solid var(--c-red); }
+.bonus-reg { border-bottom: 3px solid var(--c-yellow); }
+.bonus-bigSuika { border-bottom: 3px solid var(--c-green); }
+
+.bonusLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.bonusCount {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.bonusRatio {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lampRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.lampBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+.lampBtn:active {
+  background: var(--line);
+}
+
+.lampBtn.is-minus {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.lampName {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lamp-blue .lampName { color: #6ea8ff; }
+.lamp-green .lampName { color: #7cc98a; }
+.lamp-yellow .lampName { color: #e6cb5e; }
+.lamp-red .lampName { color: #f08a8d; }
+.lamp-rainbow .lampName {
+  background: linear-gradient(90deg, #ff6b6b, #f0c000, #46a758, #4f8cff, #b16bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lampCount {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimateNote {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-yellow);
+}
+
+.estimateBars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.estimateRow {
+  display: grid;
+  grid-template-columns: 46px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+}
+
+.estimateRow.is-excluded {
+  opacity: 0.4;
+}
+
+.estimateSetting {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.estimateBarTrack {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--panel2);
+  overflow: hidden;
+}
+
+.estimateBar {
+  height: 100%;
+  border-radius: 7px;
+  background: var(--accent);
+  opacity: 0.65;
+  transition: width 0.25s ease;
+}
+
+.estimateBar.is-top {
+  opacity: 1;
+  background: linear-gradient(90deg, var(--accent), #7cc98a);
+}
+
+.estimatePct {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---- フッター ---- */
 .footNote {
