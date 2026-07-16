@@ -42,6 +42,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,webp,webmanifest}'],
+        // /kachikachi/ 配下は別アプリ（カチカチくん）。スロット側のSWが
+        // ナビゲーションを横取りしてスロットを表示しないよう除外する
+        navigateFallbackDenylist: [/\/kachikachi\//],
       },
     }),
   ],
