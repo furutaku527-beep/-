@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  // ローカル/Vercelは相対パス、GitHub PagesビルドはBASE_PATH（例: /-/）を使う
+  // ローカル/Vercelは相対パス、GitHub PagesビルドはBASE_PATH（例: /-/kachikachi/）を使う
   base: process.env.BASE_PATH || './',
   plugins: [
     react(),
@@ -12,15 +12,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
       manifest: {
-        name: 'ピカピカスロット',
-        short_name: 'ピカスロ',
-        description: 'ノーマルAタイプ挙動を再現したオリジナルスロットゲーム',
+        name: 'カチカチくん',
+        short_name: 'カチカチ',
+        description: 'パチスロ用の小役カウンター（設定推測ツール）',
         lang: 'ja',
-        theme_color: '#12102a',
-        background_color: '#12102a',
+        theme_color: '#12151b',
+        background_color: '#12151b',
         display: 'standalone',
         orientation: 'portrait',
         start_url: './',
+        scope: './',
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -41,10 +42,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,webp,webmanifest}'],
-        // /kachikachi/ 配下は別アプリ（カチカチくん）。スロット側のSWが
-        // ナビゲーションを横取りしてスロットを表示しないよう除外する
-        navigateFallbackDenylist: [/\/kachikachi\//],
+        globPatterns: ['**/*.{js,css,html,png,webmanifest}'],
       },
     }),
   ],

@@ -1,0 +1,723 @@
+:root {
+  --bg: #12151b;
+  --panel: #1b2028;
+  --panel2: #232936;
+  --text: #e8ecf1;
+  --text-dim: #8b93a3;
+  --line: #303747;
+  --accent: #4f8cff;
+  --danger: #e5484d;
+
+  --c-white: #eef1f5;
+  --c-white-dark: #c9cfd9;
+  --c-red: #e5484d;
+  --c-red-dark: #b93338;
+  --c-green: #46a758;
+  --c-green-dark: #2f7d3e;
+  --c-yellow: #f0c000;
+  --c-yellow-dark: #c29a00;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  overscroll-behavior: none;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 76px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- 下部タブバー ---- */
+.tabBar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px 14px calc(env(safe-area-inset-bottom) + 8px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  z-index: 5;
+}
+
+.tabBtn {
+  padding: 11px 0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.tabBtn.is-active {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--panel2);
+}
+
+/* ---- ヘッダー ---- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.titleSub {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.iconBtn {
+  font-size: 22px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+/* ---- シーンタブ ---- */
+.sceneTabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 5px;
+}
+
+.sceneTab {
+  position: relative;
+  padding: 9px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.sceneTab.is-active {
+  background: var(--panel2);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.sceneDot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ---- 総回転数 ---- */
+.gamesPanel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gamesRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gamesLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.gamesValue {
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  padding: 0 4px;
+  border-radius: 8px;
+  line-height: 1.1;
+}
+
+.gamesValue:active {
+  background: var(--panel2);
+}
+
+.gamesUnit {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+.gamesInput {
+  font-size: 30px;
+  font-weight: 800;
+  width: 10ch;
+  text-align: right;
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 2px 8px;
+  outline: none;
+}
+
+.gamesButtons {
+  display: grid;
+  grid-template-columns: 52px repeat(4, 1fr);
+  gap: 6px;
+}
+
+.stepBtn {
+  padding: 11px 0;
+  border-radius: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepBtn:active {
+  background: var(--line);
+}
+
+.signBtn {
+  font-size: 18px;
+}
+
+.signBtn.is-minus {
+  color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+/* ---- カウンターカード ---- */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.card {
+  position: relative;
+  border-radius: 16px;
+  padding: 12px 12px 10px;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  overflow: hidden;
+  touch-action: manipulation;
+  transition: transform 0.06s ease;
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+}
+
+.card-white::before { background: var(--c-white); }
+.card-red::before { background: var(--c-red); }
+.card-green::before { background: var(--c-green); }
+.card-yellow::before { background: var(--c-yellow); }
+
+.card.is-flash.card-white { box-shadow: 0 0 0 2px var(--c-white), 0 0 18px var(--c-white-dark); }
+.card.is-flash.card-red { box-shadow: 0 0 0 2px var(--c-red), 0 0 18px var(--c-red-dark); }
+.card.is-flash.card-green { box-shadow: 0 0 0 2px var(--c-green), 0 0 18px var(--c-green-dark); }
+.card.is-flash.card-yellow { box-shadow: 0 0 0 2px var(--c-yellow), 0 0 18px var(--c-yellow-dark); }
+
+.cardLabel {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 2px 4px 2px 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardLabelEdit {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.cardCount {
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.cardRatio {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.card-white .cardRatio { color: var(--c-white-dark); }
+.card-red .cardRatio { color: #f08a8d; }
+.card-green .cardRatio { color: #7cc98a; }
+.card-yellow .cardRatio { color: #e6cb5e; }
+
+.cardActions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 6px;
+}
+
+.cardBtn {
+  padding: 9px 0;
+  border-radius: 9px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cardBtn:disabled {
+  opacity: 0.35;
+}
+
+.cardBtn:not(:disabled):active {
+  background: var(--line);
+}
+
+.cardBtn-reset.is-armed {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* ---- 合算パネル ---- */
+.combinePanel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.combineHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.combineTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.combineHint {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.combineResult {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.combineCount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.combineRatio {
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.combineChips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.chip {
+  padding: 9px 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-white.is-on { background: var(--c-white); color: #1b2028; border-color: var(--c-white); }
+.chip-red.is-on { background: var(--c-red); color: #fff; border-color: var(--c-red); }
+.chip-green.is-on { background: var(--c-green); color: #fff; border-color: var(--c-green); }
+.chip-yellow.is-on { background: var(--c-yellow); color: #1b2028; border-color: var(--c-yellow); }
+
+/* ---- 設定推測タブ ---- */
+.estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.estimateModeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.estimateModeRow .signBtn {
+  min-width: 84px;
+  font-size: 13px;
+}
+
+.estimateMachine {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.panelBox {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panelTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.panelCaption {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.bonusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.bonusBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+.bonusBtn:active {
+  background: var(--line);
+}
+
+.bonusBtn.is-minus {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.bonus-big { border-bottom: 3px solid var(--c-red); }
+.bonus-reg { border-bottom: 3px solid var(--c-yellow); }
+.bonus-bigSuika { border-bottom: 3px solid var(--c-green); }
+
+.bonusLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.bonusCount {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.bonusRatio {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.lampRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.lampBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+.lampBtn:active {
+  background: var(--line);
+}
+
+.lampBtn.is-minus {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.lampName {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lamp-blue .lampName { color: #6ea8ff; }
+.lamp-green .lampName { color: #7cc98a; }
+.lamp-yellow .lampName { color: #e6cb5e; }
+.lamp-red .lampName { color: #f08a8d; }
+.lamp-rainbow .lampName {
+  background: linear-gradient(90deg, #ff6b6b, #f0c000, #46a758, #4f8cff, #b16bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lampCount {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimateNote {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-yellow);
+}
+
+.estimateBars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.estimateRow {
+  display: grid;
+  grid-template-columns: 46px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+}
+
+.estimateRow.is-excluded {
+  opacity: 0.4;
+}
+
+.estimateSetting {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.estimateBarTrack {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--panel2);
+  overflow: hidden;
+}
+
+.estimateBar {
+  height: 100%;
+  border-radius: 7px;
+  background: var(--accent);
+  opacity: 0.65;
+  transition: width 0.25s ease;
+}
+
+.estimateBar.is-top {
+  opacity: 1;
+  background: linear-gradient(90deg, var(--accent), #7cc98a);
+}
+
+.estimatePct {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- フッター ---- */
+.footNote {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: auto;
+}
+
+/* ---- 設定シート ---- */
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 10;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  padding: 10px 18px calc(env(safe-area-inset-bottom) + 18px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.sheetHandle {
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  margin: 0 auto;
+}
+
+.sheetTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.toggleRow input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.sheetDivider {
+  height: 1px;
+  background: var(--line);
+}
+
+.dangerBtn {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dangerBtn-strong {
+  background: var(--danger);
+  color: #fff;
+}
+
+.helpText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.closeBtn {
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 700;
+}

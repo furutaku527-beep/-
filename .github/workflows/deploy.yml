@@ -30,6 +30,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            kachikachi/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -39,6 +42,22 @@ jobs:
         # リポジトリ名からベースパスを組み立てる（例: /-/）
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Install kachikachi dependencies
+        run: npm ci
+        working-directory: kachikachi
+
+      - name: Build kachikachi
+        run: npm run build
+        working-directory: kachikachi
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/kachikachi/
+
+      # カチカチくんを /kachikachi/ 配下に同居させる
+      - name: Merge kachikachi into dist
+        run: |
+          mkdir -p dist/kachikachi
+          cp -r kachikachi/dist/. dist/kachikachi/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
