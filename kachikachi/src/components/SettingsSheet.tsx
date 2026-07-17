@@ -1,16 +1,19 @@
+import { useState } from 'react'
 import { useCounterStore } from '../store'
+import { HelpSheet } from './HelpSheet'
 
 interface Props {
   onClose: () => void
 }
 
-/** 設定シート：音・バイブ・スリープ防止と、シーン/全データのリセット */
+/** 設定シート：使い方・仕組み、音・バイブ・スリープ防止と、シーン/全データのリセット */
 export function SettingsSheet({ onClose }: Props) {
   const prefs = useCounterStore((s) => s.prefs)
   const active = useCounterStore((s) => s.active)
   const setPref = useCounterStore((s) => s.setPref)
   const resetActiveScene = useCounterStore((s) => s.resetActiveScene)
   const resetAll = useCounterStore((s) => s.resetAll)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const confirmSceneReset = () => {
     if (window.confirm(`シーン${active}のカウントと総回転数をすべて0にします。よろしいですか？`)) {
@@ -37,6 +40,13 @@ export function SettingsSheet({ onClose }: Props) {
       >
         <div className="sheetHandle" aria-hidden="true" />
         <h2 className="sheetTitle">設定</h2>
+
+        <button type="button" className="helpEntryBtn" onClick={() => setHelpOpen(true)}>
+          <span>📖 使い方・仕組みを見る</span>
+          <span className="helpEntryChevron" aria-hidden="true">›</span>
+        </button>
+
+        <div className="sheetDivider" />
 
         <label className="toggleRow">
           <span>カウント音（カチッ）</span>
@@ -72,18 +82,12 @@ export function SettingsSheet({ onClose }: Props) {
           全データをリセット
         </button>
 
-        <div className="sheetDivider" />
-
-        <div className="helpText">
-          <p>役名はカード左上の名前をタップで変更できます。</p>
-          <p>確率はカウントと同時に常時表示されます（総回転数 ÷ カウント数）。</p>
-          <p>シーンA/B/Cで通常時・ボーナス中などを別々にカウントできます。</p>
-        </div>
-
         <button type="button" className="closeBtn" onClick={onClose}>
           閉じる
         </button>
       </div>
+
+      {helpOpen && <HelpSheet onClose={() => setHelpOpen(false)} />}
     </div>
   )
 }
