@@ -3,8 +3,6 @@ import { persist } from 'zustand/middleware'
 import {
   type BonusData,
   type ColorKey,
-  type HintGroup,
-  type LampColor,
   type SceneId,
   type SceneData,
   SCENE_IDS,
@@ -21,6 +19,7 @@ import {
   addBonus,
   addHint,
 } from './logic/counter'
+import { DEFAULT_MACHINE_ID } from './logic/machines'
 
 interface Prefs {
   sound: boolean
@@ -34,6 +33,8 @@ interface CounterStore {
   scenes: Record<SceneId, SceneData>
   active: SceneId
   view: ViewId
+  /** 選択中の機種ID（machines.ts） */
+  machineId: string
   /** 合算パネルで選択中の色 */
   combine: ColorKey[]
   prefs: Prefs
@@ -45,9 +46,10 @@ interface CounterStore {
   setGamesValue: (games: number) => void
   addGamesValue: (delta: number) => void
   addBonusValue: (key: keyof BonusData, delta: number) => void
-  addHintValue: (group: HintGroup, color: LampColor, delta: number) => void
+  addHintValue: (section: string, key: string, delta: number) => void
   setActiveScene: (id: SceneId) => void
   setView: (view: ViewId) => void
+  setMachine: (id: string) => void
   toggleCombine: (key: ColorKey) => void
   resetActiveScene: () => void
   resetAll: () => void
@@ -69,6 +71,7 @@ export const useCounterStore = create<CounterStore>()(
       scenes: createAllScenes(),
       active: 'A',
       view: 'counter',
+      machineId: DEFAULT_MACHINE_ID,
       combine: [],
       prefs: { sound: true, vibrate: true, keepAwake: false },
 
@@ -79,10 +82,11 @@ export const useCounterStore = create<CounterStore>()(
       setGamesValue: (games) => set((s) => updateActive(s, (sc) => setGames(sc, games))),
       addGamesValue: (delta) => set((s) => updateActive(s, (sc) => addGames(sc, delta))),
       addBonusValue: (key, delta) => set((s) => updateActive(s, (sc) => addBonus(sc, key, delta))),
-      addHintValue: (group, color, delta) =>
-        set((s) => updateActive(s, (sc) => addHint(sc, group, color, delta))),
+      addHintValue: (section, key, delta) =>
+        set((s) => updateActive(s, (sc) => addHint(sc, section, key, delta))),
       setActiveScene: (id) => set({ active: id }),
       setView: (view) => set({ view }),
+      setMachine: (id) => set({ machineId: id }),
       toggleCombine: (key) =>
         set((s) => ({
           combine: s.combine.includes(key)
@@ -95,14 +99,16 @@ export const useCounterStore = create<CounterStore>()(
     }),
     {
       name: 'kachikachi-store',
-      version: 2,
-      // v1（ジャグラー向け初期版）からの移行: bonus/hintsフィールドを補い、
-      // 未変更のデフォルトラベルをハナハナ用に置き換える
+      version: 3,
+      // v1（ジャグラー向け初期版）→ v2（ハナハナ天翔）→ v3（複数機種対応）
       migrate: (persisted, version) => {
         const state = persisted as {
           scenes?: Record<SceneId, SceneData>
+          machineId?: string
         } & Record<string, unknown>
+
         if (version < 2 && state.scenes) {
+          // v1: bonus/hintsフィールドを補い、未変更のデフォルトラベルをハナハナ用に置換
           const v1Labels: Record<ColorKey, string> = {
             white: 'ぶどう',
             red: 'チェリー',
@@ -126,6 +132,11 @@ export const useCounterStore = create<CounterStore>()(
               }
             }
           }
+        }
+        // v2→v3: hintsは同じネスト構造（天翔のsection id/colorキーがそのまま使える）。
+        // machineIdだけ補う。
+        if (version < 3) {
+          state.machineId ??= DEFAULT_MACHINE_ID
         }
         return state
       },
