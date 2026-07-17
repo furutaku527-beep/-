@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent } from 'react'
+import type { MouseEvent } from 'react'
 import { type ColorKey, denominator, formatRatio } from '../logic/counter'
 import { useCounterStore } from '../store'
 import { playClick, playMinus, playReset } from '../sfx'
@@ -20,6 +20,9 @@ interface Props {
  * 実機の「長押しリセット」「▲押しながら減算」は、
  * カード下部の専用ボタン（−1 / リセット2段階確認）に置き換えている。
  * カウントと確率（総回転数÷カウント）は常時同時表示（÷モード切替不要）。
+ *
+ * カウントは click で拾う（pointerdown だとスクロールの指置きで
+ * 誤カウントするため。click はスクロールやドラッグでは発火しない）。
  */
 export function CounterCard({ colorKey }: Props) {
   const cell = useCounterStore((s) => s.scenes[s.active].cells[colorKey])
@@ -47,9 +50,7 @@ export function CounterCard({ colorKey }: Props) {
     if (prefs.vibrate && 'vibrate' in navigator) navigator.vibrate(pattern)
   }
 
-  const onCount = (e: PointerEvent) => {
-    // マウスは左ボタンのみ。タッチ/ペンはそのまま受け付ける
-    if (e.pointerType === 'mouse' && e.button !== 0) return
+  const onCount = () => {
     incrementCell(colorKey)
     if (prefs.sound) playClick()
     vibrate(15)
@@ -58,7 +59,7 @@ export function CounterCard({ colorKey }: Props) {
     flashTimer.current = setTimeout(() => setFlash(false), 160)
   }
 
-  const onMinus = (e: PointerEvent) => {
+  const onMinus = (e: MouseEvent) => {
     e.stopPropagation()
     if (cell.count === 0) return
     decrementCell(colorKey)
@@ -66,7 +67,7 @@ export function CounterCard({ colorKey }: Props) {
     vibrate(8)
   }
 
-  const onReset = (e: PointerEvent) => {
+  const onReset = (e: MouseEvent) => {
     e.stopPropagation()
     if (!armed) {
       if (cell.count === 0) return
@@ -82,7 +83,7 @@ export function CounterCard({ colorKey }: Props) {
     vibrate([20, 40, 20])
   }
 
-  const onRename = (e: PointerEvent) => {
+  const onRename = (e: MouseEvent) => {
     e.stopPropagation()
     const label = window.prompt(`${COLOR_NAMES[colorKey]}ボタンの役名（10文字まで）`, cell.label)
     if (label !== null && label.trim() !== '') renameCell(colorKey, label.trim())
@@ -93,9 +94,9 @@ export function CounterCard({ colorKey }: Props) {
       className={`card card-${colorKey}${flash ? ' is-flash' : ''}`}
       role="button"
       aria-label={`${cell.label}をカウント。現在${cell.count}回`}
-      onPointerDown={onCount}
+      onClick={onCount}
     >
-      <button type="button" className="cardLabel" onPointerDown={onRename}>
+      <button type="button" className="cardLabel" onClick={onRename}>
         {cell.label} <span className="cardLabelEdit" aria-hidden="true">✎</span>
       </button>
       <div className="cardCount">{cell.count.toLocaleString()}</div>
@@ -104,7 +105,7 @@ export function CounterCard({ colorKey }: Props) {
         <button
           type="button"
           className="cardBtn"
-          onPointerDown={onMinus}
+          onClick={onMinus}
           disabled={cell.count === 0}
           aria-label={`${cell.label}を1減らす`}
         >
@@ -113,7 +114,7 @@ export function CounterCard({ colorKey }: Props) {
         <button
           type="button"
           className={`cardBtn cardBtn-reset${armed ? ' is-armed' : ''}`}
-          onPointerDown={onReset}
+          onClick={onReset}
           disabled={cell.count === 0 && !armed}
           aria-label={`${cell.label}のカウントをリセット`}
         >

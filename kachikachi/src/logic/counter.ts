@@ -12,6 +12,8 @@
  * 操作系なので、アプリでは専用ボタン・常時同時表示に置き換える。
  */
 
+import { DEFAULT_MACHINE_ID } from './machines'
+
 export type ColorKey = 'white' | 'red' | 'green' | 'yellow'
 export type SceneId = 'A' | 'B' | 'C'
 
@@ -48,6 +50,13 @@ export interface SceneData {
   cells: Record<ColorKey, CounterCell>
   bonus: BonusData
   hints: HintData
+  /**
+   * このシーンで打っている機種のID（machines.ts）。
+   * シーン＝1台のセッションなので、機種はシーンごとに保存する。
+   * こうしないと、機種を切り替えたとき記録済みの示唆が別機種の
+   * 仕様（確定演出など）で誤解釈されてしまう。
+   */
+  machineId: string
 }
 
 /** ハナハナ用のデフォルト割り当て（役名は自由に変更可能） */
@@ -66,7 +75,7 @@ export function createHints(): HintData {
   return {}
 }
 
-export function createScene(): SceneData {
+export function createScene(machineId: string = DEFAULT_MACHINE_ID): SceneData {
   return {
     games: 0,
     cells: {
@@ -77,7 +86,13 @@ export function createScene(): SceneData {
     },
     bonus: createBonus(),
     hints: createHints(),
+    machineId,
   }
+}
+
+/** シーンの機種を変更（記録済みデータは保持される） */
+export function setSceneMachine(scene: SceneData, machineId: string): SceneData {
+  return { ...scene, machineId }
 }
 
 export function createAllScenes(): Record<SceneId, SceneData> {
@@ -154,7 +169,7 @@ export function getHint(scene: SceneData, section: string, key: string): number 
   return scene.hints[section]?.[key] ?? 0
 }
 
-/** シーン全体をリセット（ラベルは保持） */
+/** シーン全体をリセット（ラベルと機種選択は保持） */
 export function resetScene(scene: SceneData): SceneData {
   return {
     games: 0,
@@ -166,6 +181,7 @@ export function resetScene(scene: SceneData): SceneData {
     },
     bonus: createBonus(),
     hints: createHints(),
+    machineId: scene.machineId,
   }
 }
 

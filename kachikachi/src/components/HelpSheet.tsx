@@ -65,6 +65,7 @@ export function HelpSheet({ onClose }: Props) {
             <ul className="helpList">
               <li>
                 <b>まず機種を選択</b>: プルダウンで機種を選ぶと、その機種の確率・示唆の仕様に切り替わります。
+                機種の選択は<b>シーン（A/B/C）ごとに保存</b>されるので、台移動したら別のシーンを使うと便利です。
               </li>
               <li>
                 <b>BIG / REG / BIG中スイカ</b>をタップで記録。BIG中スイカの確率はBIG回数×24G換算で出します。
@@ -127,6 +128,7 @@ export function HelpSheet({ onClose }: Props) {
               <li>カウント・示唆・機種選択は端末内に自動保存され、閉じても続きから使えます。</li>
               <li>設定からデータのリセット（シーン単位／全体）ができます。</li>
               <li>ホーム画面に追加すると全画面でオフライン起動できます（PWA）。</li>
+              <li>iPhoneでマナーモード（消音スイッチON）にしているとカウント音は鳴りません。</li>
             </ul>
           </section>
 

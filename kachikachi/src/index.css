@@ -41,6 +41,14 @@ button {
   cursor: pointer;
 }
 
+/* 連打時のダブルタップズームを防止（実戦での高速タップ対策） */
+button,
+select,
+input,
+[role='button'] {
+  touch-action: manipulation;
+}
+
 .app {
   max-width: 480px;
   margin: 0 auto;
@@ -465,6 +473,47 @@ button {
   min-width: 78px;
   font-size: 13px;
   flex-shrink: 0;
+}
+
+.machineNote {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: -6px;
+  padding-left: 2px;
+}
+
+.bonusSummary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: var(--panel2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bonusSummary b {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.estimateSummary {
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: var(--panel2);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimateSummary b {
+  color: var(--accent);
+  font-size: 16px;
 }
 
 .panelBox {
