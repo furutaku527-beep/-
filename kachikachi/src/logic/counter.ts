@@ -35,15 +35,12 @@ export interface BonusData {
   bigSuika: number
 }
 
-/** 示唆ランプの色 */
-export type LampColor = 'blue' | 'green' | 'yellow' | 'red' | 'rainbow'
-/** 示唆の種類: REG中サイドランプ / BIG終了時トップランプ / REG終了時トップランプ */
-export type HintGroup = 'side' | 'endBig' | 'endReg'
-
-export const LAMP_COLORS: readonly LampColor[] = ['blue', 'green', 'yellow', 'red', 'rainbow']
-export const HINT_GROUPS: readonly HintGroup[] = ['side', 'endBig', 'endReg']
-
-export type HintData = Record<HintGroup, Record<LampColor, number>>
+/**
+ * 示唆記録は「セクションID → 選択肢キー → 回数」の汎用マップ。
+ * どの機種にも対応できるよう、機種スペック（machines.ts）に依存しない
+ * ただのネストしたカウンターとして持つ。
+ */
+export type HintData = Record<string, Record<string, number>>
 
 export interface SceneData {
   /** 総回転数（ゲーム数） */
@@ -61,16 +58,12 @@ export const DEFAULT_LABELS: Record<ColorKey, string> = {
   yellow: 'その他',
 }
 
-function createLampCounts(): Record<LampColor, number> {
-  return { blue: 0, green: 0, yellow: 0, red: 0, rainbow: 0 }
-}
-
 export function createBonus(): BonusData {
   return { big: 0, reg: 0, bigSuika: 0 }
 }
 
 export function createHints(): HintData {
-  return { side: createLampCounts(), endBig: createLampCounts(), endReg: createLampCounts() }
+  return {}
 }
 
 export function createScene(): SceneData {
@@ -139,20 +132,26 @@ export function addBonus(scene: SceneData, key: keyof BonusData, delta: number):
   return { ...scene, bonus: { ...scene.bonus, [key]: clamp(scene.bonus[key] + delta) } }
 }
 
-/** 示唆ランプ記録の増減 */
+/** 示唆記録の増減（セクションID・選択肢キー指定） */
 export function addHint(
   scene: SceneData,
-  group: HintGroup,
-  color: LampColor,
+  section: string,
+  key: string,
   delta: number,
 ): SceneData {
+  const sec = scene.hints[section] ?? {}
   return {
     ...scene,
     hints: {
       ...scene.hints,
-      [group]: { ...scene.hints[group], [color]: clamp(scene.hints[group][color] + delta) },
+      [section]: { ...sec, [key]: clamp((sec[key] ?? 0) + delta) },
     },
   }
+}
+
+/** 示唆記録の値を取得（未記録は0） */
+export function getHint(scene: SceneData, section: string, key: string): number {
+  return scene.hints[section]?.[key] ?? 0
 }
 
 /** シーン全体をリセット（ラベルは保持） */
