@@ -20,18 +20,19 @@ const BONUS_ITEMS: { key: keyof BonusData; label: string }[] = [
 /** ハナハナ系: 機種を選んでボーナス・示唆を記録し設定推測 */
 export function EstimatePanel() {
   const scene = useCounterStore((s) => s.scenes[s.active])
-  const machineId = useCounterStore((s) => s.machineId)
   const prefs = useCounterStore((s) => s.prefs)
   const setMachine = useCounterStore((s) => s.setMachine)
   const addBonusValue = useCounterStore((s) => s.addBonusValue)
   const addHintValue = useCounterStore((s) => s.addHintValue)
   const [minusMode, setMinusMode] = useState(false)
 
-  const machine = getMachine(machineId)
+  const machine = getMachine(scene.machineId)
 
-  // ベルは「ベル」ラベルのカウンターと連動（なければ白ボタン）
-  const bellKey = COLOR_KEYS.find((k) => scene.cells[k].label.includes('ベル')) ?? 'white'
-  const bell = scene.cells[bellKey].count
+  // ベルは「ベル」ラベルのカウンターと連動。
+  // 該当ラベルがない場合は連動しない（別の役の数値をベルとして
+  // 推測に流し込まないため）
+  const bellKey = COLOR_KEYS.find((k) => scene.cells[k].label.includes('ベル'))
+  const bell = bellKey ? scene.cells[bellKey].count : 0
 
   const feedback = (minus: boolean) => {
     if (prefs.sound) (minus ? playMinus : playClick)()
@@ -57,7 +58,7 @@ export function EstimatePanel() {
 
   return (
     <div className="estimate">
-      {/* 機種セレクタ */}
+      {/* 機種セレクタ（機種はシーンごとに保存） */}
       <div className="machineRow">
         <label className="machineLabel" htmlFor="machineSelect">
           機種
@@ -65,7 +66,7 @@ export function EstimatePanel() {
         <select
           id="machineSelect"
           className="machineSelect"
-          value={machineId}
+          value={machine.id}
           onChange={(e) => setMachine(e.target.value)}
         >
           {MACHINES.map((m) => (
@@ -84,6 +85,7 @@ export function EstimatePanel() {
           {minusMode ? '−修正中' : '＋'}
         </button>
       </div>
+      <p className="machineNote">機種の選択はシーン（A/B/C）ごとに保存されます</p>
 
       {/* ボーナスカウント */}
       <section className="panelBox" aria-label="ボーナス">
@@ -110,9 +112,20 @@ export function EstimatePanel() {
             )
           })}
         </div>
+        <div className="bonusSummary">
+          <span>
+            合算 {(scene.bonus.big + scene.bonus.reg).toLocaleString()}回{' '}
+            <b>{formatRatio(denominator(scene.games, scene.bonus.big + scene.bonus.reg))}</b>
+          </span>
+          <span>
+            ベル {bell.toLocaleString()}回 <b>{formatRatio(denominator(scene.games, bell))}</b>
+          </span>
+        </div>
         <p className="panelCaption">
-          タップで+1（BIG中スイカの確率はBIG回数×{machine.bigGames}G換算） / ベルはカウンタータブの「
-          {scene.cells[bellKey].label}」と連動: {bell}回 {formatRatio(denominator(scene.games, bell))}
+          タップで+1（BIG中スイカの確率はBIG回数×{machine.bigGames}G換算）。
+          {bellKey
+            ? `ベルはカウンタータブの「${scene.cells[bellKey].label}」と連動しています。`
+            : 'ベルを推測に使うには、カウンタータブでいずれかの役名を「ベル」にしてください。'}
         </p>
       </section>
 
@@ -147,22 +160,33 @@ export function EstimatePanel() {
           </p>
         ))}
         {result.hasData ? (
-          <div className="estimateBars">
-            {result.probs.map((p, i) => (
-              <div key={i} className={`estimateRow${result.excluded[i] ? ' is-excluded' : ''}`}>
-                <span className="estimateSetting">設定{result.settings[i]}</span>
-                <div className="estimateBarTrack">
-                  <div
-                    className={`estimateBar${p === maxProb && p > 0 ? ' is-top' : ''}`}
-                    style={{ width: `${Math.max(p * 100, p > 0 ? 2 : 0)}%` }}
-                  />
+          <>
+            <div className="estimateBars">
+              {result.probs.map((p, i) => (
+                <div key={i} className={`estimateRow${result.excluded[i] ? ' is-excluded' : ''}`}>
+                  <span className="estimateSetting">設定{result.settings[i]}</span>
+                  <div className="estimateBarTrack">
+                    <div
+                      className={`estimateBar${p === maxProb && p > 0 ? ' is-top' : ''}`}
+                      style={{ width: `${Math.max(p * 100, p > 0 ? 2 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="estimatePct">
+                    {result.excluded[i] ? '除外' : `${(p * 100).toFixed(1)}%`}
+                  </span>
                 </div>
-                <span className="estimatePct">
-                  {result.excluded[i] ? '除外' : `${(p * 100).toFixed(1)}%`}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div className="estimateSummary">
+              <span>
+                設定4以上{' '}
+                <b>{(result.probs.slice(3).reduce((a, b) => a + b, 0) * 100).toFixed(1)}%</b>
+              </span>
+              <span>
+                設定6 <b>{(result.probs[result.probs.length - 1] * 100).toFixed(1)}%</b>
+              </span>
+            </div>
+          </>
         ) : (
           <p className="panelCaption">
             総回転数・ボーナス・ベル・示唆を記録すると各設定の期待度を表示します

@@ -9,12 +9,16 @@ import {
   setGames,
   addGames,
   setLabel,
+  setSceneMachine,
+  addHint,
+  getHint,
   denominator,
   combinedDenominator,
   formatRatio,
   MAX_VALUE,
   COLOR_KEYS,
 } from '../src/logic/counter'
+import { DEFAULT_MACHINE_ID } from '../src/logic/machines'
 
 describe('カウント操作', () => {
   it('incrementで+1される', () => {
@@ -60,15 +64,19 @@ describe('リセット', () => {
     expect(s.cells.red.count).toBe(1)
   })
 
-  it('resetSceneは全カウントとG数を0にし、ラベルは保持する', () => {
+  it('resetSceneは全カウントとG数を0にし、ラベルと機種は保持する', () => {
     let s = createScene()
     s = setLabel(s, 'white', '単独REG')
+    s = setSceneMachine(s, 'star')
     s = increment(s, 'white')
     s = setGames(s, 1000)
+    s = addHint(s, 'side', 'blue', 1)
     s = resetScene(s)
     expect(s.games).toBe(0)
     expect(s.cells.white.count).toBe(0)
     expect(s.cells.white.label).toBe('単独REG')
+    expect(s.machineId).toBe('star')
+    expect(getHint(s, 'side', 'blue')).toBe(0)
   })
 })
 
@@ -129,5 +137,31 @@ describe('シーン独立性', () => {
 
   it('全色キーが定義されている', () => {
     expect(COLOR_KEYS).toEqual(['white', 'red', 'green', 'yellow'])
+  })
+})
+
+describe('機種のシーン別保存', () => {
+  it('createSceneはデフォルト機種を持つ', () => {
+    expect(createScene().machineId).toBe(DEFAULT_MACHINE_ID)
+    expect(createScene('king').machineId).toBe('king')
+  })
+
+  it('setSceneMachineは記録データを保持したまま機種だけ変える', () => {
+    let s = createScene()
+    s = increment(s, 'white')
+    s = setGames(s, 500)
+    s = addHint(s, 'side', 'blue', 2)
+    const s2 = setSceneMachine(s, 'newking')
+    expect(s2.machineId).toBe('newking')
+    expect(s2.cells.white.count).toBe(1)
+    expect(s2.games).toBe(500)
+    expect(getHint(s2, 'side', 'blue')).toBe(2)
+  })
+
+  it('シーンごとに独立した機種を持てる', () => {
+    const scenes = createAllScenes()
+    const a = setSceneMachine(scenes.A, 'star')
+    expect(a.machineId).toBe('star')
+    expect(scenes.B.machineId).toBe(DEFAULT_MACHINE_ID)
   })
 })

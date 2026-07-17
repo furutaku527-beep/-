@@ -18,6 +18,7 @@ import {
   setLabel,
   addBonus,
   addHint,
+  setSceneMachine,
 } from './logic/counter'
 import { DEFAULT_MACHINE_ID } from './logic/machines'
 
@@ -33,8 +34,6 @@ interface CounterStore {
   scenes: Record<SceneId, SceneData>
   active: SceneId
   view: ViewId
-  /** 選択中の機種ID（machines.ts） */
-  machineId: string
   /** 合算パネルで選択中の色 */
   combine: ColorKey[]
   prefs: Prefs
@@ -71,7 +70,6 @@ export const useCounterStore = create<CounterStore>()(
       scenes: createAllScenes(),
       active: 'A',
       view: 'counter',
-      machineId: DEFAULT_MACHINE_ID,
       combine: [],
       prefs: { sound: true, vibrate: true, keepAwake: false },
 
@@ -86,7 +84,8 @@ export const useCounterStore = create<CounterStore>()(
         set((s) => updateActive(s, (sc) => addHint(sc, section, key, delta))),
       setActiveScene: (id) => set({ active: id }),
       setView: (view) => set({ view }),
-      setMachine: (id) => set({ machineId: id }),
+      // 機種はシーンごとに保存（シーン＝1台のセッション）
+      setMachine: (id) => set((s) => updateActive(s, (sc) => setSceneMachine(sc, id))),
       toggleCombine: (key) =>
         set((s) => ({
           combine: s.combine.includes(key)
@@ -99,8 +98,8 @@ export const useCounterStore = create<CounterStore>()(
     }),
     {
       name: 'kachikachi-store',
-      version: 3,
-      // v1（ジャグラー向け初期版）→ v2（ハナハナ天翔）→ v3（複数機種対応）
+      version: 4,
+      // v1（ジャグラー初期版）→ v2（天翔）→ v3（複数機種）→ v4（機種をシーン別に）
       migrate: (persisted, version) => {
         const state = persisted as {
           scenes?: Record<SceneId, SceneData>
@@ -137,6 +136,15 @@ export const useCounterStore = create<CounterStore>()(
         // machineIdだけ補う。
         if (version < 3) {
           state.machineId ??= DEFAULT_MACHINE_ID
+        }
+        // v3→v4: グローバルだった機種選択を各シーンに移す
+        if (version < 4 && state.scenes) {
+          const globalMachine = state.machineId ?? DEFAULT_MACHINE_ID
+          for (const id of SCENE_IDS) {
+            const scene = state.scenes[id]
+            if (scene) scene.machineId ??= globalMachine
+          }
+          delete state.machineId
         }
         return state
       },
